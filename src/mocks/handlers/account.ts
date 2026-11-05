@@ -63,6 +63,11 @@ export const accountHandlers = [
   route('post', '/me/password', 'profile.password', async ({ request }) => {
     const { user, session } = requireUser(request)
     const input = await parseBody(request, changePasswordInput)
+    if (!user.passwordHash) {
+      throw fail(422, 'VALIDATION_ERROR', 'Revise os campos destacados.', {
+        fields: { currentPassword: 'Esta conta usa login com Google e não possui senha.' },
+      })
+    }
     if (!(await verifyPassword(input.currentPassword, user.passwordHash))) {
       throw fail(422, 'VALIDATION_ERROR', 'Revise os campos destacados.', { fields: { currentPassword: 'A senha atual está incorreta.' } })
     }
@@ -70,7 +75,6 @@ export const accountHandlers = [
     const passwordHash = await hashPassword(input.newPassword)
     db.mutate((state) => {
       state.users.find((item) => item.id === user.id)!.passwordHash = passwordHash
-      // Encerra as outras sessões do usuário; a atual continua.
       for (const item of state.sessions) {
         if (item.userId === user.id && item.token !== session.token) item.revoked = true
       }

@@ -1,7 +1,10 @@
+import type { AuthResponse } from '@/api/contracts'
 import { toEthString, eth } from '@/lib/eth'
 
 import { settleDueOrders } from './db/domain'
 import { db } from './db/store'
+import { createMockGoogleIdToken } from './google-identity'
+import { establishGoogleSession } from './handlers/auth'
 import {
   connectedClientCount,
   getLastBroadcast,
@@ -35,6 +38,22 @@ export const mockControl = {
   },
 
   failNext: (endpoint: string, options?: { status?: number; times?: number }) => scenario.failNext(endpoint, options),
+
+  /** ID token aceito por `POST /auth/google` sem chamar o Google (só no mock). */
+  createGoogleIdToken: createMockGoogleIdToken,
+
+  /**
+   * Autentica via o mesmo caminho de sessão Google do mock (sem GIS).
+   * Útil em E2E: grave o `token` em `localStorage` e recarregue, ou use o retorno com a API.
+   */
+  googleSignIn(profile: { email: string; name?: string; picture?: string; sub?: string }): AuthResponse {
+    return establishGoogleSession({
+      sub: profile.sub ?? `google-mock-${profile.email.trim().toLowerCase()}`,
+      email: profile.email.trim().toLowerCase(),
+      name: profile.name?.trim() || null,
+      picture: profile.picture?.trim() || null,
+    })
+  },
 
   expireSessions() {
     db.mutate((state) => {

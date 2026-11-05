@@ -36,7 +36,10 @@ export type UserRecord = {
   username: string
   displayName: string
   email: string
-  passwordHash: string
+  /** Null para contas criadas só via Google. */
+  passwordHash: string | null
+  /** Subject do Google Identity (`sub`); null se a conta nunca vinculou Google. */
+  googleSub: string | null
   avatarUrl: string | null
   ensName: string | null
   walletNickname: string | null

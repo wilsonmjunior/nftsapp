@@ -10,7 +10,6 @@ async function fillLogin(scope: Locator | Page, credentials: { email: string; pa
   await scope.getByRole('button', { name: 'Entrar', exact: true }).click()
 }
 
-/** Acessa uma rota privada sem sessão, passa pelo login e volta para ela. */
 async function loginThrough(page: Page, path: string, credentials = NOVA) {
   await page.goto(path)
   await expect(page).toHaveURL(/\/login\?redirect=/)
@@ -20,8 +19,12 @@ async function loginThrough(page: Page, path: string, credentials = NOVA) {
 
 async function logout(page: Page, isMobile: boolean) {
   if (isMobile) {
-    await page.getByRole('link', { name: 'Perfil', exact: true }).click()
-    await page.getByRole('button', { name: 'Sair da conta' }).click()
+    if (!/\/perfil/.test(page.url())) {
+      await page.getByRole('link', { name: 'Perfil', exact: true }).click()
+    }
+    const more = page.locator('details').filter({ hasText: 'Mais opções' })
+    await more.locator('summary').click()
+    await more.getByRole('button', { name: 'Sair da conta' }).click()
   } else {
     await page.getByRole('button', { name: /^Conta de/ }).click()
     await page.getByRole('menuitem', { name: 'Sair' }).click()
@@ -32,6 +35,7 @@ async function logout(page: Page, isMobile: boolean) {
 test.beforeEach(async ({ page }) => {
   await page.goto('/?scenario=fast')
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  await expect.poll(async () => page.evaluate(() => Boolean(window.__kurioMock))).toBe(true)
   await page.evaluate(() => window.__kurioMock!.reset())
 })
 
@@ -69,11 +73,10 @@ test('cadastro valida campos, mostra conflito da API e entra na conta criada', a
   await submit.click()
   await expect(page.getByText('Conta criada. Boas-vindas, colecionador.teste!')).toBeVisible()
 
-  // A sessão sobrevive ao refresh.
   await page.goto('/perfil')
-  await expect(page.getByText('@colecionador.teste')).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Nome de usuário' })).toHaveValue('colecionador.teste')
   await page.reload()
-  await expect(page.getByText('teste@kurio.dev')).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'E-mail' })).toHaveValue('teste@kurio.dev')
 })
 
 test('login informa credencial errada e retorna à página que pediu autenticação', async ({ page }) => {
@@ -89,21 +92,22 @@ test('login informa credencial errada e retorna à página que pediu autenticaç
   const favorites = page.getByRole('list', { name: 'NFTs favoritados' })
   await expect(favorites.getByRole('listitem')).toHaveText(['Emerald Ape #042', 'Neon Vessel #552'])
 
-  // Já autenticado, /login devolve para o destino em vez de mostrar o formulário.
   await page.goto('/login?redirect=/perfil')
   await expect(page).toHaveURL(/\/perfil$/)
 })
 
 test('sessão expirada durante a navegação abre o login sem sair da página', async ({ page, isMobile }) => {
   await loginThrough(page, '/perfil')
-  await expect(page.getByText(NOVA.email)).toBeVisible()
-
-  await page.evaluate(() => window.__kurioMock!.expireSessions())
+  await expect(page.getByRole('textbox', { name: 'E-mail' })).toHaveValue(NOVA.email)
 
   if (isMobile) {
+    await page.evaluate(() => window.__kurioMock!.expireSessions())
     await page.getByRole('link', { name: 'Favoritos' }).click()
   } else {
+    // Abre o menu antes de expirar para o item ainda existir após o 401 em background.
     await page.getByRole('button', { name: /^Conta de/ }).click()
+    await expect(page.getByRole('menuitem', { name: 'Favoritos' })).toBeVisible()
+    await page.evaluate(() => window.__kurioMock!.expireSessions())
     await page.getByRole('menuitem', { name: 'Favoritos' }).click()
   }
 
@@ -148,10 +152,9 @@ test('logout e troca de usuário não deixam dados da sessão anterior', async (
   await expect(page.getByText('Neon Vessel #552')).toHaveCount(0)
 
   await page.goto('/perfil')
-  await expect(page.getByText(LEO.email)).toBeVisible()
-  await expect(page.getByText(NOVA.email)).toHaveCount(0)
+  await expect(page.getByRole('textbox', { name: 'E-mail' })).toHaveValue(LEO.email)
+  await expect(page.getByRole('textbox', { name: 'E-mail' })).not.toHaveValue(NOVA.email)
 
-  // O token antigo foi revogado no servidor.
   const status = await page.evaluate(async (token) => {
     const response = await fetch('https://api.mktnft.mock/auth/session', { headers: { Authorization: `Bearer ${token}` } })
     return response.status
@@ -165,9 +168,53 @@ test('sair em outra aba encerra a sessão nesta', async ({ page, context, isMobi
   await loginThrough(page, '/perfil')
   const other = await context.newPage()
   await other.goto('/perfil')
-  await expect(other.getByText(NOVA.email)).toBeVisible()
+  await expect(other.getByRole('textbox', { name: 'E-mail' })).toHaveValue(NOVA.email)
 
   await logout(page, false)
   await expect(other).toHaveURL(/\/login\?redirect=%2Fperfil/)
   await expect(other.getByRole('link', { name: 'Entrar' })).toBeVisible()
+})
+
+test('login com Google (mock) cria conta, estabelece sessão e vincula e-mail existente', async ({ page, isMobile }) => {
+  await page.goto('/login')
+  await expect.poll(async () => page.evaluate(() => Boolean(window.__kurioMock))).toBe(true)
+
+  const created = await page.evaluate(async () => {
+    const idToken = window.__kurioMock!.createGoogleIdToken({
+      email: 'google.user@kurio.dev',
+      name: 'Google User',
+      sub: 'google-sub-e2e-1',
+    })
+    const response = await fetch('https://api.mktnft.mock/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken }),
+    })
+    return { status: response.status, body: await response.json() }
+  })
+  expect(created.status).toBe(200)
+  expect(created.body.session.user.email).toBe('google.user@kurio.dev')
+  expect(created.body.session.user.displayName).toBe('Google User')
+
+  await page.evaluate((token: string) => localStorage.setItem('kurio:session-token', token), created.body.token)
+  await page.goto('/perfil')
+  if (!isMobile) {
+    await expect(page.getByRole('button', { name: /^Conta de Google User/ })).toBeVisible()
+  }
+  await expect(page.getByRole('textbox', { name: 'E-mail' })).toHaveValue('google.user@kurio.dev')
+  await expect(page.getByRole('textbox', { name: 'Nome de exibição' })).toHaveValue('Google User')
+
+  await logout(page, isMobile)
+
+  const linked = await page.evaluate(
+    (email) => window.__kurioMock!.googleSignIn({ email, name: 'Nova via Google', sub: 'google-sub-nova' }),
+    NOVA.email,
+  )
+  expect(linked.session.user.email).toBe(NOVA.email)
+  expect(linked.session.user.username).toBe('novasato')
+
+  await page.evaluate((token: string) => localStorage.setItem('kurio:session-token', token), linked.token)
+  await page.goto('/perfil')
+  await expect(page.getByRole('textbox', { name: 'E-mail' })).toHaveValue(NOVA.email)
+  await expect(page.getByRole('textbox', { name: 'Nome de usuário' })).toHaveValue('novasato')
 })

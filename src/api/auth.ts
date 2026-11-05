@@ -1,6 +1,12 @@
 import { http } from '@/lib/http'
 
-import { authResponse, sessionResponse, type LoginInput, type RegisterInput } from './contracts'
+import {
+  authResponse,
+  sessionResponse,
+  type GoogleAuthInput,
+  type LoginInput,
+  type RegisterInput,
+} from './contracts'
 
 export const authApi = {
   async register(input: RegisterInput) {
@@ -10,6 +16,11 @@ export const authApi = {
 
   async login(input: LoginInput) {
     const { data } = await http.post('/auth/login', input)
+    return authResponse.parse(data)
+  },
+
+  async loginWithGoogle(input: GoogleAuthInput) {
+    const { data } = await http.post('/auth/google', input)
     return authResponse.parse(data)
   },
 

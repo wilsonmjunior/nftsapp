@@ -1,3 +1,19 @@
+type GoogleAuthResponse = {
+  token: string
+  session: {
+    user: {
+      id: string
+      username: string
+      displayName: string
+      email: string
+      avatarUrl: string | null
+      ensName: string | null
+      walletNickname: string | null
+    }
+    expiresAt: string
+  }
+}
+
 type MockControl = {
   setScenario(name: string, seed?: number): void
   getScenario(): { name: string; seed: number }
@@ -11,6 +27,14 @@ type MockControl = {
   rebroadcastOrder(orderId: string): unknown
   socketClients(): number
   lastBroadcast(): { type: string; eventId: string; version: number } | null
+  createGoogleIdToken(claims: {
+    email: string
+    name?: string
+    picture?: string
+    sub?: string
+    expiresInSec?: number
+  }): string
+  googleSignIn(profile: { email: string; name?: string; picture?: string; sub?: string }): GoogleAuthResponse
 }
 
 type KurioSocketBridge = {

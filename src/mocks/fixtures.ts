@@ -4,7 +4,7 @@ import { eth, toEthString } from '@/lib/eth'
 import type { DbState, EditionRecord, NftRecord, UserRecord, WalletRecord } from './db/types'
 import { createRandom } from './random'
 
-export const SCHEMA_VERSION = 2
+export const SCHEMA_VERSION = 3
 
 const FIXTURE_SEED = 42
 const LISTING_BASE = Date.parse('2026-10-31T12:00:00.000Z')
@@ -32,7 +32,6 @@ const CHARACTERS = {
 
 type Character = keyof typeof CHARACTERS
 
-/** NFTs que aparecem no Figma, com os mesmos nomes e preços. */
 const FIGMA_NFTS: Array<{ name: string; number: string; character: Character; price: string; originalPrice?: string; rare?: boolean; featured?: boolean }> = [
   { name: 'Emerald Ape', number: '042', character: 'emerald', price: '1.19' },
   { name: 'Sage Nomad', number: '009', character: 'nomad', price: '1.69', featured: true },
@@ -135,7 +134,6 @@ function buildNfts() {
     for (const { name, character } of pool) {
       if (nfts.length >= 60) break
       if (round === 0 && used.has(name)) continue
-      // Preço concentrado em valores baixos, dentro da faixa do layout (0,02 a 12,30 ETH).
       const price = round2(String(0.02 + 12.28 * random.next() ** 2.4))
       const discounted = random.chance(0.2)
       nfts.push(
@@ -158,11 +156,9 @@ function buildNfts() {
   return nfts
 }
 
-/** Ajustes para os fluxos de demonstração e testes ficarem previsíveis. */
 function tuneFigmaScenarios(nfts: NftRecord[]) {
   const byName = (name: string) => nfts.find((nft) => nft.name === name)!
 
-  // Detalhe do Figma: 1/1 esgotada, 1/10 com pouco estoque, 1/50 selecionada e aberta.
   const emerald = byName('Emerald Ape #042')
   emerald.editions = [
     { id: `${emerald.id}--1-1`, kind: '1/1', supply: 1, available: 0, price: '3.57', originalPrice: null },
@@ -171,13 +167,11 @@ function tuneFigmaScenarios(nfts: NftRecord[]) {
     { id: `${emerald.id}--aberta`, kind: 'open', supply: null, available: OPEN_EDITION_STOCK, price: '0.71', originalPrice: null },
   ]
 
-  // Carrinho do Figma (2, 6 e 9 unidades) precisa de estoque na edição 1/50.
   for (const name of ['Violet Nomad #314', 'Ivory Baron #088']) {
     const edition = byName(name).editions.find((item) => item.kind === '1/50')!
     edition.available = Math.max(edition.available, 30)
   }
 
-  // Um NFT totalmente esgotado.
   for (const edition of nfts[20]!.editions) edition.available = 0
 }
 
@@ -185,7 +179,6 @@ const NOVA_PRIMARY_ADDRESS = '0xA91F3c5e7d2b4a6f8e1c9d0b2a4f6e8c1d3bE82C'
 const NOVA_SECONDARY_ADDRESS = '0x5Fb21c0d9e8a7b6c5d4e3f2a1b0c9d8e7f6a5B10'
 const LEO_PRIMARY_ADDRESS = '0x3C0d4E5f6A7b8C9d0E1f2A3b4C5d6E7f8A9b0C1D'
 
-/** Senhas fictícias: Kurio@123 (Nova) e Kurio@456 (Leo). */
 export const FIXTURE_USERS = [
   { email: 'nova@kurio.dev', password: 'Kurio@123' },
   { email: 'leo@kurio.dev', password: 'Kurio@456' },
@@ -200,6 +193,7 @@ function buildUsers(): UserRecord[] {
       email: 'nova@kurio.dev',
       passwordHash:
         'pbkdf2$100000$6b7572696f2d6e6f76612d73616c7431$f16185afaad2bf8f5b6df7d8682f1caf5d4d532d48e9574d7862360587093b77',
+      googleSub: null,
       avatarUrl: null,
       ensName: 'novasato',
       walletNickname: 'Principal',
@@ -212,6 +206,7 @@ function buildUsers(): UserRecord[] {
       email: 'leo@kurio.dev',
       passwordHash:
         'pbkdf2$100000$6b7572696f2d6c656f2d73616c743132$3bef1ba62c7c08720e0926741dce80dbee27a142c6e43daabd3102bc6651e821',
+      googleSub: null,
       avatarUrl: null,
       ensName: 'leomartins',
       walletNickname: 'Carteira do Leo',

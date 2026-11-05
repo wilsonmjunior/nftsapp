@@ -23,7 +23,8 @@ export async function hashPassword(password: string) {
   return `pbkdf2$${ITERATIONS}$${toHex(salt)}$${await derive(password, salt, ITERATIONS)}`
 }
 
-export async function verifyPassword(password: string, stored: string) {
+export async function verifyPassword(password: string, stored: string | null) {
+  if (!stored) return false
   const [scheme, iterations, salt, hash] = stored.split('$')
   if (scheme !== 'pbkdf2' || !iterations || !salt || !hash) return false
   return (await derive(password, fromHex(salt), Number(iterations))) === hash

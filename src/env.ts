@@ -13,6 +13,12 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((value) => value === 'true'),
+  /** Client ID Web do Google Identity Services. Sem valor, o botão Google fica indisponível. */
+  VITE_GOOGLE_CLIENT_ID: z.string().optional(),
 })
 
 export const env = envSchema.parse(import.meta.env)
+
+export function googleClientId() {
+  return env.VITE_GOOGLE_CLIENT_ID?.trim() || ''
+}

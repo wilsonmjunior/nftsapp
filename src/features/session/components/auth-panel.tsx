@@ -2,10 +2,11 @@ import { Tabs } from 'radix-ui'
 import type { ComponentType, ReactNode } from 'react'
 
 import type { Session } from '@/api/contracts'
-import { FacebookIcon, GoogleIcon } from '@/components/brand-icons'
+import { FacebookIcon } from '@/components/brand-icons'
 import { UnavailableAction } from '@/components/unavailable-action'
 
 import type { AuthMode } from '../auth-dialog-state'
+import { GoogleSignInButton } from './google-sign-in-button'
 import { LoginForm } from './login-form'
 import { RegisterForm } from './register-form'
 
@@ -82,8 +83,11 @@ export function AuthPanel({ mode, onModeChange, onSuccess, Title, Description }:
           <span aria-hidden="true" className="h-px flex-1 bg-border md:hidden" />
         </p>
         <div className="grid gap-4 md:mx-auto md:w-full md:max-w-[352px] md:gap-3">
-          <SocialButton icon={<GoogleIcon className="size-5" />}>Continuar com Google</SocialButton>
-          <SocialButton icon={<FacebookIcon className="size-5 text-[#1877F2]" />}>Continuar com Facebook</SocialButton>
+          <GoogleSignInButton onSuccess={onSuccess} />
+          <UnavailableAction className="flex h-10 items-center justify-center gap-3 rounded-md border border-border text-sm text-muted-foreground transition-colors hover:bg-surface-raised md:h-8 md:text-xs">
+            <FacebookIcon className="size-5 text-[#1877F2]" />
+            Continuar com Facebook
+          </UnavailableAction>
         </div>
       </div>
 
@@ -94,14 +98,5 @@ export function AuthPanel({ mode, onModeChange, onSuccess, Title, Description }:
         </button>
       </p>
     </Tabs.Root>
-  )
-}
-
-function SocialButton({ icon, children }: { icon: ReactNode; children: ReactNode }) {
-  return (
-    <UnavailableAction className="flex h-10 items-center justify-center gap-3 rounded-md border border-border text-sm text-muted-foreground transition-colors hover:bg-surface-raised md:h-8 md:text-xs">
-      {icon}
-      {children}
-    </UnavailableAction>
   )
 }
