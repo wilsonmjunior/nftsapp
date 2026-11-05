@@ -1,0 +1,80 @@
+[
+  {
+    "url": "http://localhost:4173/?scenario=fast",
+    "isRepresentativeRun": false,
+    "htmlPath": "/Users/wilson/Documents/Apps/NFTsFC/mktnft-app/lighthouse/mobile/-2026_11_05_03_06_48-report.html",
+    "jsonPath": "/Users/wilson/Documents/Apps/NFTsFC/mktnft-app/lighthouse/mobile/-2026_11_05_03_06_48-report.json",
+    "summary": {
+      "performance": 0.79,
+      "accessibility": 1,
+      "best-practices": 0.96,
+      "seo": 1,
+      "agentic-browsing": 0.5
+    }
+  },
+  {
+    "url": "http://localhost:4173/?scenario=fast",
+    "isRepresentativeRun": false,
+    "htmlPath": "/Users/wilson/Documents/Apps/NFTsFC/mktnft-app/lighthouse/mobile/-2026_11_05_03_06_58-report.html",
+    "jsonPath": "/Users/wilson/Documents/Apps/NFTsFC/mktnft-app/lighthouse/mobile/-2026_11_05_03_06_58-report.json",
+    "summary": {
+      "performance": 0.79,
+      "accessibility": 1,
+      "best-practices": 0.96,
+      "seo": 1,
+      "agentic-browsing": 0.5
+    }
+  },
+  {
+    "url": "http://localhost:4173/nfts/emerald-ape-042?scenario=fast",
+    "isRepresentativeRun": false,
+    "htmlPath": "/Users/wilson/Documents/Apps/NFTsFC/mktnft-app/lighthouse/mobile/nfts_emerald_ape_042-2026_11_05_03_07_09-report.html",
+    "jsonPath": "/Users/wilson/Documents/Apps/NFTsFC/mktnft-app/lighthouse/mobile/nfts_emerald_ape_042-2026_11_05_03_07_09-report.json",
+    "summary": {
+      "performance": 0.78,
+      "accessibility": 1,
+      "best-practices": 0.96,
+      "seo": 1,
+      "agentic-browsing": 0.5
+    }
+  },
+  {
+    "url": "http://localhost:4173/nfts/emerald-ape-042?scenario=fast",
+    "isRepresentativeRun": false,
+    "htmlPath": "/Users/wilson/Documents/Apps/NFTsFC/mktnft-app/lighthouse/mobile/nfts_emerald_ape_042-2026_11_05_03_07_29-report.html",
+    "jsonPath": "/Users/wilson/Documents/Apps/NFTsFC/mktnft-app/lighthouse/mobile/nfts_emerald_ape_042-2026_11_05_03_07_29-report.json",
+    "summary": {
+      "performance": 0.78,
+      "accessibility": 1,
+      "best-practices": 0.96,
+      "seo": 1,
+      "agentic-browsing": 0.5
+    }
+  },
+  {
+    "url": "http://localhost:4173/?scenario=fast",
+    "isRepresentativeRun": true,
+    "htmlPath": "/Users/wilson/Documents/Apps/NFTsFC/mktnft-app/lighthouse/mobile/-2026_11_05_03_06_37-report.html",
+    "jsonPath": "/Users/wilson/Documents/Apps/NFTsFC/mktnft-app/lighthouse/mobile/-2026_11_05_03_06_37-report.json",
+    "summary": {
+      "performance": 0.79,
+      "accessibility": 1,
+      "best-practices": 0.96,
+      "seo": 1,
+      "agentic-browsing": 0.5
+    }
+  },
+  {
+    "url": "http://localhost:4173/nfts/emerald-ape-042?scenario=fast",
+    "isRepresentativeRun": true,
+    "htmlPath": "/Users/wilson/Documents/Apps/NFTsFC/mktnft-app/lighthouse/mobile/nfts_emerald_ape_042-2026_11_05_03_07_19-report.html",
+    "jsonPath": "/Users/wilson/Documents/Apps/NFTsFC/mktnft-app/lighthouse/mobile/nfts_emerald_ape_042-2026_11_05_03_07_19-report.json",
+    "summary": {
+      "performance": 0.78,
+      "accessibility": 1,
+      "best-practices": 0.96,
+      "seo": 1,
+      "agentic-browsing": 0.5
+    }
+  }
+]

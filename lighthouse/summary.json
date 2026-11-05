@@ -1,0 +1,50 @@
+{
+  "mobile": [
+    {
+      "pathname": "/",
+      "runs": 3,
+      "performance": 0.79,
+      "accessibility": 1,
+      "bestPractices": 0.96,
+      "seo": 1,
+      "lcpMs": 5811.06365,
+      "cls": 0,
+      "tbtMs": 19.5
+    },
+    {
+      "pathname": "/nfts/emerald-ape-042",
+      "runs": 3,
+      "performance": 0.78,
+      "accessibility": 1,
+      "bestPractices": 0.96,
+      "seo": 1,
+      "lcpMs": 5813.2075,
+      "cls": 0.0008444935917404983,
+      "tbtMs": 75.49999999999955
+    }
+  ],
+  "desktop": [
+    {
+      "pathname": "/",
+      "runs": 3,
+      "performance": 0.98,
+      "accessibility": 1,
+      "bestPractices": 0.96,
+      "seo": 1,
+      "lcpMs": 1146.2910499999998,
+      "cls": 0.0001956024518718086,
+      "tbtMs": 0
+    },
+    {
+      "pathname": "/nfts/emerald-ape-042",
+      "runs": 3,
+      "performance": 0.98,
+      "accessibility": 1,
+      "bestPractices": 0.96,
+      "seo": 1,
+      "lcpMs": 1191.1390500000002,
+      "cls": 0.0001956024518718086,
+      "tbtMs": 0
+    }
+  ]
+}
