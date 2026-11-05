@@ -21,7 +21,6 @@ const SESSION_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/logout']
 
 const unauthorizedListeners = new Set<UnauthorizedListener>()
 
-/** Avisado quando uma requisição autenticada recebe 401 (sessão expirada ou revogada). */
 export function onUnauthorized(listener: UnauthorizedListener) {
   unauthorizedListeners.add(listener)
   return () => {

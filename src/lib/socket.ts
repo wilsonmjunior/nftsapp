@@ -55,7 +55,6 @@ export function disconnectSocket() {
   socketInstance?.disconnect()
 }
 
-/** Controles de teste / painel. */
 export function installSocketTestBridge() {
   if (!env.VITE_ENABLE_MOCKS || typeof window === 'undefined') return
   Object.assign(window, {

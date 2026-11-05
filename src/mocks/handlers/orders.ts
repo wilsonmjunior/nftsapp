@@ -170,7 +170,6 @@ export const orderHandlers = [
           updatedAt: new Date(now).toISOString(),
         }
 
-        // Reserva o estoque; volta se o pagamento for recusado.
         for (const line of record.items) {
           const nft = state.nfts.find((item) => item.id === line.nftId)!
           const edition = nft.editions.find((item) => item.id === line.editionId)!

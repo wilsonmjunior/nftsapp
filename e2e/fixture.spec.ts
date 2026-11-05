@@ -1,9 +1,5 @@
 import { expect, test } from './fixtures.ts'
 
-/**
- * Valida a fixture compartilhada: reset isolado, cenário por teste,
- * relógio controlado e disparo de eventos via `__kurioMock` (handlers MSW / hub).
- */
 test.describe('fixture kurio', () => {
   test.use({ scenario: 'fast' })
 

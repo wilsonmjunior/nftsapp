@@ -69,7 +69,6 @@ export function ProfileNav({ className }: { className?: string }) {
   )
 }
 
-/** Navegação compacta no topo (mobile). */
 export function ProfileNavMobile() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const logout = useLogout()

@@ -28,7 +28,6 @@ export default function MockPanel() {
 
   function resetAll() {
     mockControl.reset()
-    // Limpa sessão, carrinho do visitante e demais dados do cliente para um estado conhecido.
     for (const key of Object.keys(localStorage)) {
       if (key.startsWith(CLIENT_KEYS_PREFIX) && key !== MOCK_DB_KEY) localStorage.removeItem(key)
     }

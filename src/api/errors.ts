@@ -36,7 +36,6 @@ export class ApiError extends Error {
     return this.status === 401
   }
 
-  /** Falhas que podem dar certo numa nova tentativa sem mudar o pedido. */
   get isTransient() {
     if (this.kind === 'network' || this.kind === 'timeout') return true
     return this.status !== undefined && (this.status >= 500 || this.status === 429 || this.code === 'TRANSIENT')

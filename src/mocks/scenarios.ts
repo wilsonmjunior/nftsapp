@@ -24,9 +24,7 @@ export const SCENARIO_NAMES = [
 export type ScenarioName = (typeof SCENARIO_NAMES)[number]
 
 export type RequestContext = {
-  /** Nome estável do endpoint, por exemplo `nfts.list`. */
   endpoint: string
-  /** Quantas vezes este endpoint já foi chamado no cenário atual (começa em 0). */
   index: number
   random: () => number
 }
@@ -35,11 +33,9 @@ type Scenario = {
   label: string
   description: string
   latency: (context: RequestContext) => number
-  /** Resposta que substitui o handler (falhas de rede ou HTTP). */
   intercept?: (context: RequestContext) => Response | undefined
   emptyCatalog?: boolean
   sessionTtlMs?: number
-  /** Gatilhos aplicados no envio do pedido. */
   checkout?: 'price-change' | 'sold-out' | 'timeout'
   paymentOutcome?: 'confirmed' | 'declined'
 }

@@ -47,10 +47,8 @@ test.describe('navegação por teclado e foco', () => {
     await expect(dialog).toBeVisible()
     await expect(dialog.getByRole('tab', { name: 'Entrar' })).toBeVisible()
 
-    // Foco inicial dentro do diálogo
     await expect(dialog.locator(':focus')).toBeVisible()
 
-    // Tab permanece no diálogo (trap do Radix)
     for (let i = 0; i < 8; i += 1) {
       await page.keyboard.press('Tab')
       const inside = await dialog.evaluate((node) => node.contains(document.activeElement))

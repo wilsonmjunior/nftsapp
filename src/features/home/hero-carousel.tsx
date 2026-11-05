@@ -12,7 +12,6 @@ type Slide = {
   eyebrow: string
   title: [string, string]
   description: string
-  /** Versão curta usada no card compacto do mobile. */
   short: { title: [string, string]; description: string }
   cta: string
   link: Pick<LinkProps, 'to' | 'search' | 'hash'>

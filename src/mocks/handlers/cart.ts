@@ -115,7 +115,6 @@ export const cartHandlers = [
       const draft = cartOf(state, user.id)
       const entry = draft.items.find((candidate) => candidate.id === params.itemId)!
       entry.quantity = quantity
-      // Alterar a quantidade confirma o preço atual.
       entry.priceAtAdd = edition.price
       touch(draft)
       return draft
@@ -147,7 +146,6 @@ export const cartHandlers = [
         if (!edition || maxPerOrder(edition) === 0) continue
 
         const existing = draft.items.find((item) => item.nftId === line.nftId && item.editionId === line.editionId)
-        // Itens do visitante somam ao carrinho salvo, limitados à disponibilidade.
         const quantity = Math.min((existing?.quantity ?? 0) + line.quantity, maxPerOrder(edition))
         if (existing) existing.quantity = quantity
         else draft.items.push({ id: db.nextId('cit'), ...line, quantity, priceAtAdd: edition.price })

@@ -18,10 +18,8 @@ function write(key: string, value: string | null) {
   }
 }
 
-/** Chave de idempotência da tentativa atual de checkout (sessionStorage). */
 export const checkoutIdempotency = {
   get: () => read(IDEMPOTENCY_KEY),
-  /** Gera uma chave nova ou reutiliza a existente se `reuse` for true. */
   ensure(reuse = true) {
     if (reuse) {
       const existing = read(IDEMPOTENCY_KEY)
@@ -32,7 +30,7 @@ export const checkoutIdempotency = {
     return key
   },
   clear: () => write(IDEMPOTENCY_KEY, null),
-  /** Troca a chave (ex.: após PRICE_CHANGED — o payload mudou). */
+  /** Após PRICE_CHANGED o payload mudou — precisa de chave nova. */
   rotate() {
     const key = crypto.randomUUID()
     write(IDEMPOTENCY_KEY, key)
@@ -40,7 +38,6 @@ export const checkoutIdempotency = {
   },
 }
 
-/** Pedido pendente em acompanhamento — sobrevive a refresh. */
 export const pendingOrderStorage = {
   get: () => read(PENDING_ORDER_KEY),
   set: (orderId: string | null) => write(PENDING_ORDER_KEY, orderId),

@@ -80,7 +80,6 @@ test('falha de pagamento, clique repetido e timeout com recuperação', async ({
   test.skip(isMobile, 'mesmo fluxo no desktop')
   test.setTimeout(90_000)
 
-  // Pagamento recusado
   await loginNova(page, '/pagamento', 'payment-declined')
   await expect
     .poll(async () => page.evaluate(() => window.__kurioMock!.getScenario().name))
@@ -92,7 +91,6 @@ test('falha de pagamento, clique repetido e timeout com recuperação', async ({
   await page.evaluate(() => window.__kurioMock!.settleOrders())
   await expect(page.getByRole('heading', { name: 'Pedido recusado' })).toBeVisible({ timeout: 10_000 })
 
-  // Clique repetido: cenário lento trava o botão; Idempotency-Key evita pedido duplicado
   await page.evaluate(() => {
     sessionStorage.removeItem('kurio:pending-order')
     sessionStorage.removeItem('kurio:checkout-idempotency')
@@ -108,11 +106,9 @@ test('falha de pagamento, clique repetido e timeout com recuperação', async ({
   await expect(dialog).toBeVisible()
 
   await dialog.getByRole('button', { name: 'Confirmar e pagar' }).click()
-  // Botão troca o rótulo e fica travado durante o envio (cenário lento).
   await expect(dialog.getByRole('button', { name: 'Enviando…' })).toBeDisabled()
   await expect(page).toHaveURL(/\/pedidos\/ord_/, { timeout: 20_000 })
 
-  // Timeout: cria pedido mas resposta atrasa; recuperação com a mesma chave
   await page.evaluate(() => {
     sessionStorage.removeItem('kurio:pending-order')
     sessionStorage.removeItem('kurio:checkout-idempotency')
@@ -156,7 +152,6 @@ test('Socket.IO altera preço durante o checkout e exige nova confirmação', as
   await expect(summary).toContainText('3.00 ETH', { timeout: 10_000 })
   await expect(summary).not.toContainText('26.846')
 
-  // Cenário de preço no envio: força PRICE_CHANGED no POST /orders
   await page.evaluate(() => {
     sessionStorage.removeItem('kurio:checkout-idempotency')
     sessionStorage.removeItem('kurio:pending-order')

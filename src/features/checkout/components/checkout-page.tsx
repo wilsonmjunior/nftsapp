@@ -71,7 +71,6 @@ export function CheckoutPage() {
           className="grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.75fr)] lg:items-start lg:gap-10"
         >
           <div className="grid gap-8">
-            {/* Mobile: carteira primeiro. Desktop: formulário primeiro (order). */}
             <div className="order-2 md:order-1">
               <CollectorForm form={checkout.form} formError={checkout.formError} />
             </div>

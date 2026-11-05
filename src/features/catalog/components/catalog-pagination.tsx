@@ -2,7 +2,6 @@ import { Link } from '@tanstack/react-router'
 import { cn } from 'cn'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
-/** Até 4 páginas em sequência (como no layout), com primeira e última sempre alcançáveis. */
 function pageWindow(page: number, totalPages: number): Array<number | 'gap'> {
   const size = 4
   let start = Math.max(1, Math.min(page - 1, totalPages - size + 1))

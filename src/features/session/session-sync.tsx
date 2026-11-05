@@ -12,7 +12,6 @@ import { clearSession, PRIVATE_SCOPE, SESSION_KEY } from './session-query'
 
 export const SESSION_EXPIRED_MESSAGE = 'Sua sessão expirou. Entre novamente para continuar de onde parou.'
 
-/** Reage a 401 em qualquer requisição e a login/logout feitos em outra aba. */
 export function SessionSync() {
   const queryClient = useQueryClient()
   const router = useRouter()

@@ -8,7 +8,6 @@ import { CatalogFilters } from './catalog-filters'
 import { CatalogSearchInput } from './catalog-search-input'
 import { SortSelect } from './sort-select'
 
-/** Busca e botão de filtros no topo do Início em telas sem a sidebar (como no layout mobile). */
 export function CatalogQuickBar() {
   const { search, query, update, clear, commitQuery } = useCatalogState()
   const active = hasActiveFilters(search)

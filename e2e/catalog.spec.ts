@@ -48,14 +48,12 @@ test('busca, filtros combinados, ordenação, paginação e restauração pelo h
   await expect(status(page)).toHaveText('60 NFTs encontrados, página 1 de 7.')
   expect((await cardNames(page)).slice(0, 3)).toEqual(['Emerald Ape #042', 'Sage Nomad #009', 'Neon Vessel #552'])
 
-  // Paginação: a página 2 mostra outros NFTs e entra na URL.
   await page.getByRole('link', { name: 'Página 2' }).click()
   await expect(page).toHaveURL(/[?&]page=2/)
   await expect(status(page)).toHaveText('60 NFTs encontrados, página 2 de 7.')
   const secondPage = await cardNames(page)
   expect(secondPage).not.toContain('Emerald Ape #042')
 
-  // Busca com debounce; volta para a página 1.
   await page.locator('[data-catalog-search]:visible').fill('golden')
   await expect(page).toHaveURL(/[?&]q=golden/)
   await expect(page).not.toHaveURL(/page=/)
@@ -63,7 +61,6 @@ test('busca, filtros combinados, ordenação, paginação e restauração pelo h
   await expect(status(page)).toHaveText(new RegExp(`^${goldenTotal} NFTs encontrados`))
   for (const name of await cardNames(page)) expect(name).toMatch(/golden/i)
 
-  // Filtros combinados com a busca.
   const filters = await openFilters(page, isMobile)
   await filters.getByRole('button', { name: /^Ethereum/ }).click()
   await expect(filters.getByRole('button', { name: /^Ethereum/ })).toHaveAttribute('aria-pressed', 'true')
@@ -72,7 +69,6 @@ test('busca, filtros combinados, ordenação, paginação e restauração pelo h
   expect(combinedTotal).toBeLessThan(goldenTotal)
   await expect(status(page)).toHaveText(new RegExp(`^${combinedTotal} NFTs? encontrados?|^Nenhum NFT`))
 
-  // Limpa a busca e combina coleção + rede.
   await page.locator('button[aria-label="Limpar busca"]:visible').click()
   await expect(page).not.toHaveURL(/q=/)
   const filters2 = await openFilters(page, isMobile)
@@ -82,7 +78,6 @@ test('busca, filtros combinados, ordenação, paginação e restauração pelo h
   const filteredTotal = await apiTotal(page, 'collections=arte-digital&networks=ethereum&networks=polygon')
   await expect(status(page)).toHaveText(new RegExp(`^${filteredTotal} NFTs? encontrados?`))
 
-  // Ordenação por menor preço.
   await chooseSort(page, isMobile, 'Menor preço')
   await expect(page).toHaveURL(/sort=price-asc/)
   await expect(grid(page)).toHaveAttribute('aria-busy', 'false')
@@ -90,12 +85,10 @@ test('busca, filtros combinados, ordenação, paginação e restauração pelo h
   expect(prices).toEqual([...prices].sort((a, b) => a - b))
   const sortedUrl = page.url()
 
-  // Refresh mantém tudo.
   await page.reload()
   await expect(status(page)).toHaveText(new RegExp(`^${filteredTotal} NFTs? encontrados?`))
   expect(await cardPrices(page)).toEqual(prices)
 
-  // Voltar no histórico desfaz um passo por vez.
   await page.goBack()
   await expect(page).not.toHaveURL(/sort=/)
   await expect(status(page)).toHaveText(new RegExp(`^${filteredTotal} NFTs? encontrados?`))

@@ -13,12 +13,10 @@ export function sumEth(values: Array<EthAmount | Big>) {
   return values.reduce<Big>((total, value) => total.plus(value), new Big(0))
 }
 
-/** Normaliza para string decimal sem zeros à direita (formato do contrato). */
 export function toEthString(value: Big) {
   return value.round(18).toFixed().replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '')
 }
 
-/** Formata para exibição: "1.19 ETH", com ao menos 2 casas como no layout. */
 export function formatEth(value: EthAmount | Big, { minDecimals = 2, maxDecimals = 6 } = {}) {
   const big = typeof value === 'string' ? new Big(value) : value
   const [, decimals = ''] = big.toFixed().split('.')

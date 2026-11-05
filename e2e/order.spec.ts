@@ -101,7 +101,6 @@ test('recibo confirmado: snapshot, transação simulada e imutabilidade', async 
   await expect(page.getByText('Emerald Ape #042')).toBeVisible()
   await expect(page.getByText('26.846 ETH').first()).toBeVisible()
 
-  // Alteração posterior no catálogo não muda o recibo.
   await page.evaluate(() =>
     window.__kurioMock!.updateNft('emerald-ape-042', {
       editionId: 'emerald-ape-042--1-50',
@@ -132,7 +131,6 @@ test('pedido recusado e 404 para outro usuário', async ({ page, isMobile }) => 
   await expect(page.getByRole('alert').filter({ hasText: /recusou/i })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Voltar ao carrinho' })).toBeVisible()
 
-  // Pedido de Nova é 404 para Leo
   await page.evaluate(() => {
     localStorage.removeItem('kurio:session-token')
   })

@@ -127,7 +127,6 @@ function seedFromId(id: string) {
   return hash >>> 0 || 1
 }
 
-/** Avaliações fictícias estáveis por NFT, derivadas da média e da contagem. */
 export function buildReviews(nft: NftRecord): CollectorReview[] {
   const count = Math.min(nft.rating.count, 12)
   if (count === 0) return []
@@ -175,7 +174,7 @@ export function nftEventData(nft: NftRecord) {
   }
 }
 
-/** Resolve preço e disponibilidade atuais de uma linha. `expectedPrice` sinaliza mudança de preço. */
+/** `expectedPrice` sinaliza mudança de preço. */
 export function priceLine(line: CartLineInput, expectedPrice?: string): PricedLine {
   const nft = findNft(line.nftId)
   const edition = nft && findEdition(nft, line.editionId)
@@ -246,7 +245,7 @@ export type QuoteCalculation = Omit<QuoteRecord, 'id' | 'userId' | 'createdAt' |
   coupon: { code: string; description: string } | null
 }
 
-/** Calcula a cotação com preços e disponibilidade atuais. O cupom já precisa estar validado. */
+/** Cupom já precisa estar validado. */
 export function calculateQuote(items: CartLineInput[], coupon: CouponRecord | null, network: Network): QuoteCalculation {
   const lines = items.map((item) => priceLine(item))
   const subtotal = sumEth(lines.map((line) => line.lineTotal))
@@ -316,7 +315,6 @@ export function explorerUrl(network: Network, hash: string) {
   return `${EXPLORERS[network]}${hash}`
 }
 
-/** Resolve pedidos pendentes cujo prazo da simulação passou. */
 export function settleDueOrders(now = Date.now()) {
   const due = db.state.orders.filter((order) => order.status === 'pending' && Date.parse(order.resolveAt) <= now)
   if (due.length === 0) return

@@ -9,9 +9,7 @@ type QuantityStepperProps = {
   id?: string
   disabled?: boolean
   className?: string
-  /** Compacto para a barra fixa do mobile. */
   size?: 'default' | 'compact'
-  /** Rótulo acessível do campo numérico. */
   'aria-label'?: string
 }
 

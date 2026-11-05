@@ -50,7 +50,6 @@ export function establishSession(queryClient: QueryClient, { session, token }: A
   void import('@/features/cart/use-cart').then(({ mergeGuestCart }) => mergeGuestCart(queryClient, session.user.id))
 }
 
-/** Encerra a sessão só no cliente: token, cache privado e conexão em tempo real. */
 export function clearSession(queryClient: QueryClient) {
   sessionToken.set(null)
   disconnectSocket()

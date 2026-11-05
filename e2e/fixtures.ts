@@ -1,6 +1,5 @@
 import { expect, test as base, type Locator, type Page } from '@playwright/test'
 
-/** Cenários do mock (`src/mocks/scenarios.ts`). */
 export type ScenarioName =
   | 'default'
   | 'fast'
@@ -61,9 +60,7 @@ export type KurioHelpers = {
    * usa `setInterval` (hero) ou TTL de sessão.
    */
   installClock: (at?: Date) => Promise<void>
-  /** Avança o relógio instalado (ms ou string estilo Playwright, ex. `'00:00:30'`). */
   fastForward: (duration: number | string) => Promise<void>
-  /** Dispara mutação no mock; eventos saem pelo hub Socket.IO / handlers MSW. */
   updateNft: (
     nftId: string,
     patch: { editionId?: string; price?: string; available?: number },

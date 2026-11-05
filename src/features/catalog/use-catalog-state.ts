@@ -16,13 +16,11 @@ export const CLEARED_FILTERS: CatalogPatch = {
   maxPrice: undefined,
 }
 
-/** Estado do catálogo derivado da URL, compartilhado pela barra compacta e pela seção do catálogo. */
 export function useCatalogState() {
   const search = homeRoute.useSearch()
   const navigate = homeRoute.useNavigate()
   const query = useQuery(nftListQueryOptions(toListQuery(search)))
 
-  // Toda mudança de filtro volta para a página 1 e vira uma entrada do histórico.
   const update = useCallback(
     (patch: CatalogPatch) => navigate({ search: (prev) => ({ ...prev, ...patch, page: undefined }), resetScroll: false }),
     [navigate],

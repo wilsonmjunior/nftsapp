@@ -153,7 +153,6 @@ export function WalletPanel({
                       <span className="block text-xs font-normal text-muted-foreground">{option.hint}</span>
                     </span>
                   </Button>
-                  {/* Recusa simulada — útil para E2E e demonstração. */}
                   <button
                     type="button"
                     className="text-left text-xs text-muted-foreground underline-offset-2 hover:underline"

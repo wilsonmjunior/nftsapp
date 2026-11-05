@@ -8,7 +8,6 @@ export const CONNECTABLE_WALLETS: Array<{ type: WalletType; label: string; hint:
   { type: 'coinbase', label: 'Coinbase Wallet', hint: 'App ou extensão' },
 ]
 
-/** Simula atraso e desfecho da conexão de carteira (sem extensão real). */
 export function simulateWalletConnect(outcome: 'accept' | 'refuse' = 'accept') {
   return new Promise<'connected' | 'refused'>((resolve) => {
     window.setTimeout(() => resolve(outcome === 'accept' ? 'connected' : 'refused'), 700)

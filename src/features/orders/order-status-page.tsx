@@ -30,7 +30,6 @@ export function OrderStatusPage({ orderId }: OrderStatusPageProps) {
   const orderQuery = useQuery({
     ...orderQueryOptions(userId, orderId),
     enabled: Boolean(user),
-    // Enquanto pendente, consulta periodicamente (socket também atualiza o cache).
     refetchInterval: (query) => (query.state.data?.status === 'pending' ? 1_500 : false),
   })
 
@@ -48,7 +47,6 @@ export function OrderStatusPage({ orderId }: OrderStatusPageProps) {
 
   return (
     <div className="relative min-h-[70vh] pb-[calc(var(--bottom-nav-height)+1rem)] pt-4 md:pb-16 md:pt-6">
-      {/* Atmosfera de modal/recibo centralizado (frame desktop do Figma). */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(210,138,76,0.12),transparent_55%)]"

@@ -3,7 +3,6 @@ import { useSyncExternalStore } from 'react'
 const listeners = new Set<() => void>()
 let expired = false
 
-/** Lembra que a última sessão expirou para explicar o motivo no formulário de login. */
 export const expiredNotice = {
   get: () => expired,
   set(value: boolean) {

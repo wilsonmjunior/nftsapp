@@ -14,7 +14,6 @@ export const favoriteToggleResponse = z.object({
   favorited: z.boolean(),
 })
 
-/** Item do carrinho como o cliente envia (inclusive no carrinho de visitante). */
 export const cartLineInput = z.object({
   nftId: z.string(),
   editionId: z.string(),
@@ -25,7 +24,6 @@ export type CartLineInput = z.infer<typeof cartLineInput>
 export const lineIssue = z.enum(['PRICE_CHANGED', 'INSUFFICIENT_AVAILABILITY', 'SOLD_OUT', 'NOT_FOUND'])
 export type LineIssue = z.infer<typeof lineIssue>
 
-/** Item com preço e dados de exibição resolvidos pela API. */
 export const pricedLine = cartLineInput.extend({
   name: z.string(),
   tokenId: z.string(),

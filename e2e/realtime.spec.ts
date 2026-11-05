@@ -46,7 +46,6 @@ test('nft.updated via Socket.IO atualiza carrinho e anuncia mudança de preço',
     .poll(async () => page.evaluate(() => window.__kurioMock!.lastBroadcast()?.type))
     .toBe('nft.updated')
 
-  // Preço da linha e do resumo atualizam via socket → cache/invalidate REST.
   await expect(emerald.getByText('1.45 ETH').locator('visible=true')).toBeVisible({ timeout: 10_000 })
   await expect(page.getByRole('complementary', { name: /Resumo da carteira/ })).not.toContainText('26.83 ETH')
   await expect(page.getByRole('status').filter({ hasText: /1\.45 ETH|NFT atualizado/ })).toBeVisible()

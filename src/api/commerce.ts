@@ -51,7 +51,6 @@ export const cartApi = {
     return cart.parse(data)
   },
 
-  /** Junta o carrinho do visitante ao do usuário depois do login. */
   async merge(items: CartLineInput[]) {
     const { data } = await http.post('/cart/merge', { items })
     return cart.parse(data)

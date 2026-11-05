@@ -74,7 +74,6 @@ export function useAddToCart() {
   }
 }
 
-/** Junta o carrinho do visitante ao do usuário e limpa o armazenamento local. */
 export async function mergeGuestCart(queryClient: QueryClient, userId: string) {
   const items = guestCart.get()
   if (items.length === 0) return

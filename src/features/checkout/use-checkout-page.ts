@@ -76,7 +76,6 @@ export function useCheckoutPage() {
 
   const selectedWallet = wallets.find((item) => item.id === walletId) ?? null
 
-  // Prefill carteira principal quando a lista chega.
   useEffect(() => {
     if (walletId || wallets.length === 0) return
     const primary = wallets.find((item) => item.slot === 'primary') ?? wallets[0]!
@@ -118,7 +117,6 @@ export function useCheckoutPage() {
     },
   })
 
-  // Prefill do perfil + carteira selecionada.
   useEffect(() => {
     if (!user) return
     const wallet = selectedWallet
@@ -133,7 +131,6 @@ export function useCheckoutPage() {
     })
   }, [user, selectedWallet, form])
 
-  // Pedido pendente persistido: retoma o acompanhamento se ainda estiver aberto.
   useEffect(() => {
     const pendingId = pendingOrderStorage.get()
     if (!pendingId || !user) return
@@ -360,12 +357,10 @@ export function useCheckoutPage() {
     const quote = review.quote
     void form.handleSubmit(async (values) => {
       await placeOrder(values, quote)
-      // Fecha a revisão só depois do envio (sucesso navega; falha pode reabrir outro review).
       setReview((current) => (current?.quote.id === quote.id ? null : current))
     })()
   }
 
-  /** Valida o formulário e abre a revisão; o envio real ocorre em `confirmReview`. */
   const submit = form.handleSubmit(() => {
     if (!activeQuote) {
       setFormError('Aguarde a cotação antes de pagar.')

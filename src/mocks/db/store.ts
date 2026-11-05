@@ -39,7 +39,6 @@ export const db = {
     return state
   },
 
-  /** Aplica uma mudança, persiste e emite os eventos informados. */
   mutate<T>(recipe: (draft: DbState) => T, changes: DbChange[] = []): T {
     const result = recipe(state)
     persist()

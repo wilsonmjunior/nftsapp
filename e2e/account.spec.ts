@@ -41,7 +41,6 @@ test('edição de perfil, avatar, senha e validação de conflitos', async ({ pa
   await profile.getByRole('button', { name: 'Salvar perfil' }).click()
   await expect(page.getByText('Perfil atualizado.')).toBeVisible()
 
-  // Conflito de e-mail (Leo)
   await profile.getByLabel('E-mail').fill('leo@kurio.dev')
   await profile.getByRole('button', { name: 'Salvar perfil' }).click()
   await expect(profile.getByText(/e-mail já está em uso/i)).toBeVisible()

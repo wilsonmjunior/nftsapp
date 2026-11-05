@@ -51,7 +51,6 @@ export const guestCart = {
     write([])
   },
 
-  /** Soma quantidade se a linha já existir; respeita `maxPerOrder` quando informado. */
   add(line: CartLineInput, maxPerOrder = Number.POSITIVE_INFINITY) {
     const items = [...current]
     const existing = items.find((item) => item.nftId === line.nftId && item.editionId === line.editionId)

@@ -1,6 +1,5 @@
 import { Link } from '@tanstack/react-router'
 
-/** Rotas reservadas no layout cuja implementação vem nas próximas etapas. */
 export function PagePlaceholder({ title }: { title: string }) {
   return (
     <div className="page-container flex flex-col items-start gap-4 py-16">

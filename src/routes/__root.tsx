@@ -37,7 +37,6 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   notFoundComponent: NotFound,
 })
 
-/** No mobile, login e cadastro são telas inteiras, sem rodapé nem barra inferior (como no Figma). */
 const FOCUSED_PAGES = ['/login', '/cadastro']
 
 function RootLayout() {

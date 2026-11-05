@@ -27,7 +27,6 @@ export function applyOrderUpdated(
     if (!canApply(current, event)) return current
     applied = true
     if (!current) {
-      // Pedido ainda não está no cache: invalida a lista e o detalhe para o REST preencher.
       return current
     }
     return {
@@ -44,7 +43,6 @@ export function applyOrderUpdated(
   void queryClient.invalidateQueries({ queryKey: privateKey(currentUserId, 'cart') })
 
   if (!applied) {
-    // Sem cache local: ainda reconcilia via REST.
     void queryClient.invalidateQueries({
       predicate: (query) =>
         query.queryKey[0] === PRIVATE_SCOPE &&

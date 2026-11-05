@@ -20,7 +20,6 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('favoritos: login sob demanda, atualização otimista, falha com rollback e nova tentativa', async ({ page }) => {
-  // Visitante: favoritar pede login sem sair do catálogo.
   await favoriteButton(page, 'Sage Nomad #009').click()
   await expect(page.getByText('Entre na sua conta para salvar favoritos.')).toBeVisible()
   const dialog = page.getByRole('dialog')
@@ -29,18 +28,15 @@ test('favoritos: login sob demanda, atualização otimista, falha com rollback e
   await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
   await expect(dialog).toBeHidden()
 
-  // Favoritos da sessão aparecem nos cards.
   await expect(favoriteButton(page, 'Emerald Ape #042')).toHaveAttribute('aria-pressed', 'true')
   await expect(favoriteButton(page, 'Neon Vessel #552')).toHaveAttribute('aria-pressed', 'true')
 
-  // Inclusão persiste no servidor e após refresh.
   await favoriteButton(page, 'Sage Nomad #009').click()
   await expect(favoriteButton(page, 'Sage Nomad #009')).toHaveAttribute('aria-pressed', 'true')
   await expect.poll(() => serverFavorites(page)).toContain('sage-nomad-009')
   await page.reload()
   await expect(favoriteButton(page, 'Sage Nomad #009')).toHaveAttribute('aria-pressed', 'true')
 
-  // Falha na mutation: volta ao estado anterior e oferece nova tentativa.
   await page.evaluate(() => window.__kurioMock!.failNext('favorites.add', { status: 500 }))
   await favoriteButton(page, 'Cosmic Bloom #118').click()
   const toast = page.getByText('Não foi possível atualizar os favoritos. Cosmic Bloom #118 voltou ao estado anterior.')
@@ -52,12 +48,10 @@ test('favoritos: login sob demanda, atualização otimista, falha com rollback e
   await expect(favoriteButton(page, 'Cosmic Bloom #118')).toHaveAttribute('aria-pressed', 'true')
   await expect.poll(() => serverFavorites(page)).toContain('cosmic-bloom-118')
 
-  // Remoção.
   await favoriteButton(page, 'Emerald Ape #042').click()
   await expect(favoriteButton(page, 'Emerald Ape #042')).toHaveAttribute('aria-pressed', 'false')
   await expect.poll(() => serverFavorites(page)).not.toContain('emerald-ape-042')
 
-  // A página de favoritos reflete o servidor.
   await page.goto('/favoritos')
   const list = page.getByRole('list', { name: 'NFTs favoritados' })
   await expect(list).toContainText('Cosmic Bloom #118')

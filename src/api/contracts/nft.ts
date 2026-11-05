@@ -31,9 +31,7 @@ export const nftSummary = z.object({
   image: z.string(),
   collection,
   network,
-  /** Preço da edição padrão. */
   price: ethAmount,
-  /** Preço anterior quando há desconto. */
   originalPrice: ethAmount.nullable(),
   rare: z.boolean(),
   soldOut: z.boolean(),

@@ -109,7 +109,6 @@ export function CatalogSection() {
   )
 }
 
-/** Duas colunas desencontradas no mobile (como no layout) e três a partir do tablet. */
 const gridClass = 'grid grid-cols-2 gap-x-4 gap-y-8 max-md:[&>li:nth-child(even)]:mt-8 md:grid-cols-3 md:gap-x-6 md:gap-y-12'
 
 function ResultsStatus({ query }: { query: UseQueryResult<NftListResponse> }) {

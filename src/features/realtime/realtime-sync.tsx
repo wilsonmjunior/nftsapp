@@ -13,10 +13,6 @@ import { applyNftUpdated } from './apply-nft-updated'
 import { applyOrderUpdated } from './apply-order-updated'
 import { clearSeenEvents, rememberEventId } from './seen-events'
 
-/**
- * Ciclo de vida do Socket.IO ligado à sessão:
- * conecta com token, autentica no mock, aplica eventos versionados e reconcilia na reconexão.
- */
 export function RealtimeSync() {
   const queryClient = useQueryClient()
   const { user } = useSession()

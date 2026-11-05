@@ -9,7 +9,7 @@ const list = <T extends z.ZodType>(item: T) =>
     .catch(undefined)
     .transform((value) => (value?.length ? [...new Set(value)].sort() : undefined))
 
-/** Estado do catálogo na URL. Valores inválidos caem no padrão em vez de quebrar a página. */
+/** Valores inválidos caem no padrão em vez de quebrar a página. */
 export const catalogSearch = z.object({
   q: z.string().trim().max(80).optional().catch(undefined).transform((value) => value || undefined),
   collection: list(z.string()),

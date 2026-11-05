@@ -12,7 +12,6 @@ export const Route = createFileRoute('/favoritos')({
   component: FavoritesPage,
 })
 
-/** Lista provisória; os cards do catálogo substituem esta lista na etapa do catálogo. */
 function FavoritesPage() {
   const { user } = useSession()
   const favorites = useQuery({ ...favoritesQueryOptions(user?.id ?? ''), enabled: Boolean(user) })

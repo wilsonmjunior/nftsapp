@@ -100,7 +100,6 @@ test('carrinho do visitante persiste no refresh e faz merge no login', async ({ 
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()
   await expect(page).toHaveURL(/\/pagamento/)
 
-  // Carrinho do visitante foi fundido e limpo.
   await expect
     .poll(async () => page.evaluate(() => localStorage.getItem('kurio:guest-cart')))
     .toBeNull()
