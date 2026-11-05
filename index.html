@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Kurio: descubra, colecione e compre NFTs de criadores emergentes e consagrados."
+    />
+    <meta name="theme-color" content="#140d0a" />
+    <meta name="color-scheme" content="dark" />
+    <title>Kurio — Marketplace de NFTs</title>
+    <!-- LCP do hero (slide inicial emerald); sizes alinhados ao NftImage do carrossel. -->
+    <link
+      rel="preload"
+      as="image"
+      type="image/avif"
+      href="/nfts/emerald-320.avif"
+      imagesrcset="/nfts/emerald-320.avif 320w, /nfts/emerald-640.avif 640w, /nfts/emerald-960.avif 960w"
+      imagesizes="(min-width: 1024px) 450px, (min-width: 640px) 200px, 45vw"
+      fetchpriority="high"
+    />
+  </head>
+  <body>
+    <div id="root">
+      <!--
+        Pintura imediata do LCP antes do JS (substituída pelo React).
+        Mantém as mesmas dimensões do hero mobile para evitar CLS.
+      -->
+      <div
+        aria-hidden="true"
+        style="
+          box-sizing: border-box;
+          max-width: 1280px;
+          margin: 0 auto;
+          padding: 1rem 1.25rem 0;
+          display: grid;
+          grid-template-columns: 1fr minmax(140px, 45vw);
+          gap: 1rem;
+          align-items: center;
+          min-height: 180px;
+          background: #140d0a;
+          color: #f5f1eb;
+          font-family: 'Roboto Mono', ui-monospace, monospace;
+        "
+      >
+        <div>
+          <p style="margin: 0; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: #cfb28c">
+            Bem-vindo à Kurio
+          </p>
+          <h1 style="margin: 0.25rem 0 0; font-size: 1.25rem; line-height: 1.25; font-weight: 700; text-transform: uppercase">
+            Seja dono da cultura digital
+          </h1>
+        </div>
+        <img
+          src="/nfts/emerald-320.avif"
+          srcset="/nfts/emerald-320.avif 320w, /nfts/emerald-640.avif 640w, /nfts/emerald-960.avif 960w"
+          sizes="(min-width: 1024px) 450px, (min-width: 640px) 200px, 45vw"
+          width="640"
+          height="640"
+          alt=""
+          fetchpriority="high"
+          decoding="async"
+          style="width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 1rem; display: block"
+        />
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
