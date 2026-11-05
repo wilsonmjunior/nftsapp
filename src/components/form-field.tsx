@@ -24,7 +24,7 @@ export function FormField({ label, hideLabel, hint, error, className, children }
   const describedBy = [errorId, hintId].filter(Boolean).join(' ') || undefined
 
   return (
-    <div className={cn('grid gap-1.5', className)}>
+    <div className={cn('grid content-start gap-1.5', className)}>
       <label htmlFor={id} className={cn('text-sm font-medium', hideLabel && 'sr-only')}>
         {label}
       </label>
