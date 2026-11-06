@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react'
 import { toast } from 'sonner'
 
 import { cartApi } from '@/api/commerce'
-import type { CartLineInput, Edition } from '@/api/contracts'
+import type { CartLineInput } from '@/api/contracts'
 import { toApiError } from '@/api/errors'
 import { useAnnounce } from '@/components/a11y/use-announce'
 import { useSession } from '@/features/session/use-session'
@@ -61,7 +61,7 @@ export function useAddToCart() {
       })
     },
     onError: (error) => {
-      toast.error(toApiError(error).message || (error instanceof Error ? error.message : 'Não foi possível adicionar.'))
+      toast.error(toApiError(error).message)
     },
     onSettled: () => {
       if (user) void queryClient.invalidateQueries({ queryKey: cartQueryOptions(user.id).queryKey })
@@ -84,8 +84,4 @@ export async function mergeGuestCart(queryClient: QueryClient, userId: string) {
   } catch {
     // Mantém o carrinho local para nova tentativa na próxima sessão / página do carrinho.
   }
-}
-
-export function editionMax(edition: Edition | undefined) {
-  return edition?.maxPerOrder ?? 0
 }

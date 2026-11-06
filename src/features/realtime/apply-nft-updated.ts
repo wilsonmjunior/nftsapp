@@ -1,8 +1,9 @@
-import type { QueryClient } from '@tanstack/react-query'
+import type { Query, QueryClient } from '@tanstack/react-query'
 
 import type { Cart, LineIssue, NftDetail, NftListResponse, NftSummary, NftUpdatedEvent } from '@/api/contracts'
 import { catalogKeys } from '@/features/catalog/queries'
 import { guestCart } from '@/features/cart/guest-cart'
+import { QUOTE_SCOPE } from '@/features/cart/quote-query'
 import { PRIVATE_SCOPE } from '@/features/session/session-query'
 import { eth, formatEth, toEthString } from '@/lib/eth'
 
@@ -71,6 +72,23 @@ function patchCart(cart: Cart, event: NftUpdatedEvent): Cart {
   return { ...cart, items, version: cart.version + 1 }
 }
 
+const cartQueries = {
+  predicate: (query: Query) => query.queryKey[0] === PRIVATE_SCOPE && query.queryKey[2] === 'cart',
+}
+
+function noticeMessage(
+  event: NftUpdatedEvent,
+  { priceChanged, availabilityChanged, previousPrice }: { priceChanged: boolean; availabilityChanged: boolean; previousPrice?: string },
+) {
+  if (priceChanged) {
+    const was = previousPrice ? ` (era ${formatEth(previousPrice)})` : ''
+    return `Preço atualizado para ${formatEth(event.data.price)}${was}.`
+  }
+  if (event.data.soldOut) return 'Um NFT do carrinho ou catálogo esgotou.'
+  if (availabilityChanged) return 'Disponibilidade de um NFT foi atualizada.'
+  return `NFT atualizado (versão ${event.version}).`
+}
+
 export type NftUpdateNotice = {
   nftId: string
   message: string
@@ -123,25 +141,18 @@ export function applyNftUpdated(
     return { nft: patchSummary(current.nft, event) }
   })
 
-  queryClient.setQueriesData<Cart>(
-    {
-      predicate: (query) => query.queryKey[0] === PRIVATE_SCOPE && query.queryKey[2] === 'cart',
-    },
-    (current) => {
-      if (!current?.items) return current
-      const before = current.items.find((item) => item.nftId === nftId)
-      if (before) previousPrice ??= before.unitPrice
-      const next = patchCart(current, event)
-      if (next !== current) touched = true
-      return next
-    },
-  )
+  queryClient.setQueriesData<Cart>(cartQueries, (current) => {
+    if (!current?.items) return current
+    const before = current.items.find((item) => item.nftId === nftId)
+    if (before) previousPrice ??= before.unitPrice
+    const next = patchCart(current, event)
+    if (next !== current) touched = true
+    return next
+  })
 
   const inGuestCart = guestCart.get().some((line) => line.nftId === nftId)
   const inServerCart = queryClient
-    .getQueriesData<Cart>({
-      predicate: (query) => query.queryKey[0] === PRIVATE_SCOPE && query.queryKey[2] === 'cart',
-    })
+    .getQueriesData<Cart>(cartQueries)
     .some(([, cart]) => {
       const line = cart?.items.find((item) => item.nftId === nftId)
       if (line) previousPrice ??= line.unitPrice
@@ -149,23 +160,14 @@ export function applyNftUpdated(
     })
 
   if (inGuestCart || inServerCart) {
-    void queryClient.invalidateQueries({ queryKey: ['quote'] })
-    void queryClient.invalidateQueries({
-      predicate: (query) => query.queryKey[0] === PRIVATE_SCOPE && query.queryKey[2] === 'cart',
-    })
+    void queryClient.invalidateQueries({ queryKey: [QUOTE_SCOPE] })
+    void queryClient.invalidateQueries(cartQueries)
     touched = true
   }
 
   if (!touched) return null
 
   const priceChanged = Boolean(previousPrice && previousPrice !== event.data.price)
-  const message = priceChanged
-    ? `Preço atualizado para ${formatEth(event.data.price)}${previousPrice ? ` (era ${formatEth(previousPrice)})` : ''}.`
-    : availabilityChanged || event.data.soldOut
-      ? event.data.soldOut
-        ? 'Um NFT do carrinho ou catálogo esgotou.'
-        : 'Disponibilidade de um NFT foi atualizada.'
-      : `NFT atualizado (versão ${event.version}).`
-
+  const message = noticeMessage(event, { priceChanged, availabilityChanged, previousPrice })
   return { nftId, message, priceChanged, availabilityChanged: availabilityChanged || event.data.soldOut }
 }

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useMemo, useSyncExternalStore } from 'react'
 import { toast } from 'sonner'
 
 import { cartApi, quoteApi } from '@/api/commerce'
@@ -9,44 +9,49 @@ import { toApiError } from '@/api/errors'
 import { useAnnounce } from '@/components/a11y/use-announce'
 import { useSession } from '@/features/session/use-session'
 
-import { couponStorage } from './coupon-storage'
-import { guestCart, guestLineId, parseGuestLineId } from './guest-cart'
+import { guestCart, guestLineId, parseGuestLineId, toCartLines } from './guest-cart'
 import { cartQueryOptions } from './queries'
+import { QUOTE_SCOPE, quoteKey } from './quote-query'
+import { useCoupon } from './use-coupon'
 
 export type CartDisplayItem = PricedLine & { id: string }
 
-function toLines(items: Array<{ nftId: string; editionId: string; quantity: number }>): CartLineInput[] {
-  return items.map(({ nftId, editionId, quantity }) => ({ nftId, editionId, quantity }))
+const CART_NETWORK: Network = 'ethereum'
+
+function findPricedLine(quote: Quote | undefined, line: CartLineInput) {
+  return quote?.items.find((item) => item.nftId === line.nftId && item.editionId === line.editionId)
 }
 
-function mergeDisplay(cartItems: CartItem[] | null, guestLines: CartLineInput[], quote: Quote | undefined): CartDisplayItem[] {
+/** Linha do visitante exibida enquanto a cotação ainda não trouxe nome, imagem e preço. */
+function placeholderLine(line: CartLineInput): PricedLine {
+  return {
+    ...line,
+    name: '…',
+    tokenId: '',
+    image: '',
+    editionKind: 'open',
+    editionLabel: '',
+    unitPrice: '0',
+    lineTotal: '0',
+    available: 0,
+    maxPerOrder: 0,
+    nftVersion: 0,
+    issues: [],
+  }
+}
+
+function toDisplayItems(cartItems: CartItem[] | null, guestLines: CartLineInput[], quote: Quote | undefined): CartDisplayItem[] {
   if (cartItems) {
     return cartItems.map((item) => {
-      const priced = quote?.items.find((line) => line.nftId === item.nftId && line.editionId === item.editionId)
+      const priced = findPricedLine(quote, item)
       return priced ? { ...priced, id: item.id, quantity: item.quantity } : item
     })
   }
-  return guestLines.map((line) => {
-    const priced = quote?.items.find((item) => item.nftId === line.nftId && item.editionId === line.editionId)
-    return {
-      ...(priced ?? {
-        ...line,
-        name: '…',
-        tokenId: '',
-        image: '',
-        editionKind: 'open' as const,
-        editionLabel: '',
-        unitPrice: '0',
-        lineTotal: '0',
-        available: 0,
-        maxPerOrder: 0,
-        nftVersion: 0,
-        issues: [],
-      }),
-      id: guestLineId(line.nftId, line.editionId),
-      quantity: line.quantity,
-    }
-  })
+  return guestLines.map((line) => ({
+    ...(findPricedLine(quote, line) ?? placeholderLine(line)),
+    id: guestLineId(line.nftId, line.editionId),
+    quantity: line.quantity,
+  }))
 }
 
 export function useCartPage() {
@@ -55,6 +60,7 @@ export function useCartPage() {
   const announce = useAnnounce()
   const navigate = useNavigate()
   const guestLines = useSyncExternalStore(guestCart.subscribe, guestCart.get, () => [] as CartLineInput[])
+  const owner = user?.id ?? 'guest'
 
   const cartQuery = useQuery({
     ...cartQueryOptions(user?.id ?? ''),
@@ -62,52 +68,50 @@ export function useCartPage() {
   })
 
   const lines = useMemo(
-    () => (user ? toLines(cartQuery.data?.items ?? []) : guestLines),
+    () => (user ? toCartLines(cartQuery.data?.items ?? []) : guestLines),
     [user, cartQuery.data?.items, guestLines],
   )
 
-  const [draftCoupon, setDraftCoupon] = useState(() => couponStorage.get() ?? '')
-  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(() => couponStorage.get())
-  const [network] = useState<Network>('ethereum')
-  const [couponError, setCouponError] = useState<string | null>(null)
+  const { dropIfRejected, ...coupon } = useCoupon({ owner, lines, network: CART_NETWORK })
+  const { appliedCoupon } = coupon
 
   const quoteQuery = useQuery({
-    queryKey: ['quote', user?.id ?? 'guest', lines, appliedCoupon, network],
-    queryFn: ({ signal }) =>
-      quoteApi.create(
-        {
-          items: lines,
-          couponCode: appliedCoupon ?? undefined,
-          network,
-        },
-        signal,
-      ),
+    queryKey: quoteKey({ owner, lines, couponCode: appliedCoupon, network: CART_NETWORK }),
+    queryFn: async ({ signal }) => {
+      try {
+        return await quoteApi.create(
+          { items: lines, couponCode: appliedCoupon ?? undefined, network: CART_NETWORK },
+          signal,
+        )
+      } catch (error) {
+        if (appliedCoupon) dropIfRejected(error)
+        throw error
+      }
+    },
     enabled: lines.length > 0,
     staleTime: 10_000,
     retry: false,
   })
 
-  useEffect(() => {
-    if (quoteQuery.data) {
-      try {
-        sessionStorage.setItem('kurio:last-quote', quoteQuery.data.id)
-      } catch {
-        // ignore
-      }
-    }
-  }, [quoteQuery.data])
-
   const items = useMemo(
-    () => mergeDisplay(user ? (cartQuery.data?.items ?? null) : null, guestLines, quoteQuery.data),
+    () => toDisplayItems(user ? (cartQuery.data?.items ?? null) : null, guestLines, quoteQuery.data),
     [user, cartQuery.data?.items, guestLines, quoteQuery.data],
   )
+
+  function invalidateCartAndQuote() {
+    if (user) void queryClient.invalidateQueries({ queryKey: cartQueryOptions(user.id).queryKey })
+    void queryClient.invalidateQueries({ queryKey: [QUOTE_SCOPE] })
+  }
+
+  function showError(error: unknown) {
+    toast.error(toApiError(error).message)
+  }
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, quantity, maxPerOrder }: { id: string; quantity: number; maxPerOrder: number; name: string }) => {
       if (!user) {
-        const parsed = parseGuestLineId(id)
-        if (!parsed) throw new Error('Item inválido.')
-        guestCart.update(parsed.nftId, parsed.editionId, quantity, maxPerOrder)
+        const { nftId, editionId } = parseGuestLineId(id)
+        guestCart.update(nftId, editionId, quantity, maxPerOrder)
         return
       }
       const cart = await cartApi.updateItem(id, quantity)
@@ -116,21 +120,15 @@ export function useCartPage() {
     onSuccess: (_result, variables) => {
       announce(`Quantidade de ${variables.name} atualizada para ${variables.quantity}.`)
     },
-    onError: (error) => {
-      toast.error(toApiError(error).message || (error instanceof Error ? error.message : 'Não foi possível atualizar.'))
-    },
-    onSettled: () => {
-      if (user) void queryClient.invalidateQueries({ queryKey: cartQueryOptions(user.id).queryKey })
-      void queryClient.invalidateQueries({ queryKey: ['quote'] })
-    },
+    onError: showError,
+    onSettled: invalidateCartAndQuote,
   })
 
   const removeMutation = useMutation({
     mutationFn: async ({ id }: { id: string; name: string }) => {
       if (!user) {
-        const parsed = parseGuestLineId(id)
-        if (!parsed) throw new Error('Item inválido.')
-        guestCart.remove(parsed.nftId, parsed.editionId)
+        const { nftId, editionId } = parseGuestLineId(id)
+        guestCart.remove(nftId, editionId)
         return
       }
       const cart = await cartApi.removeItem(id)
@@ -141,67 +139,9 @@ export function useCartPage() {
       announce(message)
       toast.success(message)
     },
-    onError: (error) => {
-      toast.error(toApiError(error).message || (error instanceof Error ? error.message : 'Não foi possível remover.'))
-    },
-    onSettled: () => {
-      if (user) void queryClient.invalidateQueries({ queryKey: cartQueryOptions(user.id).queryKey })
-      void queryClient.invalidateQueries({ queryKey: ['quote'] })
-    },
+    onError: showError,
+    onSettled: invalidateCartAndQuote,
   })
-
-  const applyMutation = useMutation({
-    mutationFn: async (code: string) => {
-      const quote = await quoteApi.create({ items: lines, couponCode: code, network })
-      return { quote, code }
-    },
-    onSuccess: ({ quote, code }) => {
-      setAppliedCoupon(code)
-      setDraftCoupon(code)
-      setCouponError(null)
-      couponStorage.set(code)
-      queryClient.setQueryData(['quote', user?.id ?? 'guest', lines, code, network], quote)
-      announce(`Cupom ${code} aplicado.`)
-      toast.success(`Cupom ${code} aplicado.`)
-    },
-    onError: (error) => {
-      const apiError = toApiError(error)
-      setCouponError(apiError.fields.couponCode ?? apiError.message)
-    },
-  })
-
-  function applyCoupon() {
-    const code = draftCoupon.trim().toUpperCase()
-    if (!code) {
-      setCouponError('Informe um código promocional.')
-      return
-    }
-    if (lines.length === 0) {
-      setCouponError('Adicione itens ao carrinho antes de aplicar um cupom.')
-      return
-    }
-    setCouponError(null)
-    applyMutation.mutate(code)
-  }
-
-  function removeCoupon() {
-    setAppliedCoupon(null)
-    setDraftCoupon('')
-    setCouponError(null)
-    couponStorage.set(null)
-    announce('Cupom removido.')
-  }
-
-  // Se a cotação com cupom falhar depois (ex.: cupom expirou), remove e mantém o carrinho.
-  useEffect(() => {
-    if (!quoteQuery.error || !appliedCoupon) return
-    const error = toApiError(quoteQuery.error)
-    if (error.code === 'COUPON_INVALID' || error.code === 'COUPON_EXPIRED') {
-      setCouponError(error.message)
-      setAppliedCoupon(null)
-      couponStorage.set(null)
-    }
-  }, [quoteQuery.error, appliedCoupon])
 
   function checkout() {
     if (lines.length === 0) return
@@ -216,7 +156,7 @@ export function useCartPage() {
     void navigate({ to: '/pagamento' })
   }
 
-  const isLoading = Boolean(user) ? cartQuery.isPending : false
+  const isLoading = Boolean(user) && cartQuery.isPending
   const quotePending = lines.length > 0 && (quoteQuery.isPending || quoteQuery.isFetching)
 
   return {
@@ -228,14 +168,8 @@ export function useCartPage() {
     quote: quoteQuery.data,
     quotePending,
     quoteError: quoteQuery.error ? toApiError(quoteQuery.error) : null,
-    draftCoupon,
-    setDraftCoupon,
-    appliedCoupon,
-    couponError,
-    applyCoupon,
-    removeCoupon,
-    applyingCoupon: applyMutation.isPending,
-    network,
+    ...coupon,
+    network: CART_NETWORK,
     updateQuantity: (item: CartDisplayItem, quantity: number) =>
       updateMutation.mutate({ id: item.id, quantity, maxPerOrder: item.maxPerOrder, name: item.name }),
     removeItem: (item: CartDisplayItem) => removeMutation.mutate({ id: item.id, name: item.name }),

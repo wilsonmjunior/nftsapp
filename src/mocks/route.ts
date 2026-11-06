@@ -54,16 +54,16 @@ export async function parseBody<T extends z.ZodType>(request: Request, schema: T
     throw fail(400, 'VALIDATION_ERROR', 'O corpo da requisição precisa ser JSON.')
   }
 
-  const result = schema.safeParse(body)
-  if (!result.success) {
+  const parsed = schema.safeParse(body)
+  if (!parsed.success) {
     const fields: Record<string, string> = {}
-    for (const issue of result.error.issues) {
+    for (const issue of parsed.error.issues) {
       const key = issue.path.join('.') || '_'
       fields[key] ??= issue.message
     }
     throw fail(422, 'VALIDATION_ERROR', 'Revise os campos destacados.', { fields })
   }
-  return result.data
+  return parsed.data
 }
 
 export function sessionTtlMs() {

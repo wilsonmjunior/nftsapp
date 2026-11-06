@@ -1,5 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 
+import { waitForMock } from './fixtures.ts'
+
 const NOVA = { email: 'nova@kurio.dev', password: 'Kurio@123', name: 'Nova Sato' }
 const LEO = { email: 'leo@kurio.dev', password: 'Kurio@456', name: 'Leo Martins' }
 const EXPIRED_MESSAGE = 'Sua sessão expirou. Entre novamente para continuar de onde parou.'
@@ -35,7 +37,7 @@ async function logout(page: Page, isMobile: boolean) {
 test.beforeEach(async ({ page }) => {
   await page.goto('/?scenario=fast')
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-  await expect.poll(async () => page.evaluate(() => Boolean(window.__kurioMock))).toBe(true)
+  await waitForMock(page)
   await page.evaluate(() => window.__kurioMock!.reset())
 })
 
@@ -177,7 +179,7 @@ test('sair em outra aba encerra a sessão nesta', async ({ page, context, isMobi
 
 test('login com Google (mock) cria conta, estabelece sessão e vincula e-mail existente', async ({ page, isMobile }) => {
   await page.goto('/login')
-  await expect.poll(async () => page.evaluate(() => Boolean(window.__kurioMock))).toBe(true)
+  await waitForMock(page)
 
   const created = await page.evaluate(async () => {
     const idToken = window.__kurioMock!.createGoogleIdToken({

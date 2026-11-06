@@ -3,7 +3,8 @@ import { ZodError } from 'zod'
 
 import { apiErrorBody, type ApiErrorCode } from './contracts'
 
-export type ApiErrorKind = 'http' | 'network' | 'timeout' | 'canceled' | 'contract'
+/** `client`: regra validada no próprio browser, sem chegar à API (ex.: carrinho do visitante). */
+export type ApiErrorKind = 'http' | 'network' | 'timeout' | 'canceled' | 'contract' | 'client'
 
 type ApiErrorInit = {
   kind: ApiErrorKind
@@ -48,6 +49,7 @@ const FALLBACK_MESSAGES: Record<ApiErrorKind, string> = {
   timeout: 'O servidor demorou para responder. Tente novamente.',
   canceled: 'A requisição foi cancelada.',
   contract: 'Recebemos uma resposta inesperada do servidor.',
+  client: 'Não foi possível concluir a operação.',
 }
 
 export function toApiError(error: unknown): ApiError {

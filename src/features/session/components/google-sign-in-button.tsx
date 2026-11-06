@@ -39,7 +39,7 @@ export function GoogleSignInButton({ onSuccess }: GoogleSignInButtonProps) {
     )
   }
 
-  const handleClick = async () => {
+  const signInWithGoogle = async () => {
     if (busy || login.isPending) return
     setBusy(true)
     try {
@@ -54,7 +54,7 @@ export function GoogleSignInButton({ onSuccess }: GoogleSignInButtonProps) {
   }
 
   return (
-    <button type="button" onClick={() => void handleClick()} disabled={busy || login.isPending} className={BUTTON_CLASS}>
+    <button type="button" onClick={() => void signInWithGoogle()} disabled={busy || login.isPending} className={BUTTON_CLASS}>
       <GoogleIcon className="size-5" />
       {busy || login.isPending ? 'Entrando com Google…' : 'Continuar com Google'}
     </button>

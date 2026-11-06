@@ -23,3 +23,8 @@ export function formatEth(value: EthAmount | Big, { minDecimals = 2, maxDecimals
   const digits = Math.min(Math.max(decimals.replace(/0+$/, '').length, minDecimals), maxDecimals)
   return `${big.toFixed(digits)} ETH`
 }
+
+export function shortAddress(address: string) {
+  if (address.length < 12) return address
+  return `${address.slice(0, 6)}…${address.slice(-4)}`
+}

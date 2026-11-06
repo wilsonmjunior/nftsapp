@@ -9,7 +9,7 @@ import {
 } from '@/api/contracts'
 import { NftImage } from '@/components/nft-image'
 import { Button } from '@/components/ui/button'
-import { formatEth } from '@/lib/eth'
+import { formatEth, shortAddress } from '@/lib/eth'
 
 const EXPLORER_LABEL: Record<Network, string> = {
   ethereum: 'Ver no Etherscan',
@@ -22,9 +22,10 @@ function shortHash(hash: string) {
   return `${hash.slice(0, 10)}…${hash.slice(-8)}`
 }
 
-function shortAddress(address: string) {
-  if (address.length < 12) return address
-  return `${address.slice(0, 6)}…${address.slice(-4)}`
+const STATUS_LABEL: Record<Order['status'], string> = {
+  pending: 'Pagamento pendente',
+  confirmed: 'Pedido confirmado',
+  declined: 'Pedido recusado',
 }
 
 function formatOrderDate(iso: string) {
@@ -42,13 +43,6 @@ type OrderReceiptProps = {
 }
 
 export function OrderReceipt({ order }: OrderReceiptProps) {
-  const statusLabel =
-    order.status === 'confirmed'
-      ? 'Pedido confirmado'
-      : order.status === 'declined'
-        ? 'Pedido recusado'
-        : 'Pagamento pendente'
-
   return (
     <article
       aria-labelledby="pedido-titulo"
@@ -58,7 +52,7 @@ export function OrderReceipt({ order }: OrderReceiptProps) {
       <header className="text-center">
         <StatusIcon status={order.status} />
         <h1 id="pedido-titulo" className="mt-4 text-xl font-bold md:text-2xl">
-          {statusLabel}
+          {STATUS_LABEL[order.status]}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Pedido <span className="font-mono text-foreground">{order.id}</span>
@@ -76,7 +70,7 @@ export function OrderReceipt({ order }: OrderReceiptProps) {
         )}
         {order.status === 'confirmed' && (
           <p role="status" className="mt-3 text-sm text-muted-foreground">
-            Recibo fixo do momento da compra — alterações no catálogo não mudam estes valores.
+            Valores do momento da compra. Mudanças no catálogo não alteram este recibo.
           </p>
         )}
       </header>

@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { waitForMock } from './fixtures.ts'
+
 async function loginNova(page: Page, redirect = '/carrinho') {
   await page.goto(`/login?redirect=${encodeURIComponent(redirect)}&scenario=fast`)
   await page.getByPlaceholder('contato@email.com').fill('nova@kurio.dev')
@@ -16,6 +18,7 @@ async function waitForSocket(page: Page) {
 test.beforeEach(async ({ page }) => {
   await page.goto('/?scenario=fast')
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  await waitForMock(page)
   await page.evaluate(() => {
     window.__kurioMock!.reset()
     localStorage.removeItem('kurio:guest-cart')

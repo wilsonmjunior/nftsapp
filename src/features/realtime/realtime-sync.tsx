@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 
 import { nftUpdatedEvent, orderUpdatedEvent } from '@/api/contracts'
 import { useAnnounce } from '@/components/a11y/use-announce'
+import { QUOTE_SCOPE } from '@/features/cart/quote-query'
 import { PRIVATE_SCOPE } from '@/features/session/session-query'
 import { useSession } from '@/features/session/use-session'
 import { connectSocket, disconnectSocket } from '@/lib/socket'
@@ -29,7 +30,7 @@ export function RealtimeSync() {
       return
     }
 
-    let cancelled = false
+    const controller = new AbortController()
     let socket: Awaited<ReturnType<typeof connectSocket>> | null = null
 
     function authenticate() {
@@ -42,7 +43,7 @@ export function RealtimeSync() {
         void queryClient.invalidateQueries({
           predicate: (query) =>
             query.queryKey[0] === PRIVATE_SCOPE ||
-            query.queryKey[0] === 'quote' ||
+            query.queryKey[0] === QUOTE_SCOPE ||
             (query.queryKey[0] === 'catalog' && query.queryKey[1] === 'detail'),
         })
         announce('Conexão em tempo real restabelecida. Atualizamos carrinho e cotações.')
@@ -78,7 +79,7 @@ export function RealtimeSync() {
     }
 
     void connectSocket().then((client) => {
-      if (cancelled) return
+      if (controller.signal.aborted) return
       socket = client
       client.on('connect', onConnect)
       client.on('nft.updated', onNftUpdated)
@@ -90,7 +91,7 @@ export function RealtimeSync() {
     })
 
     return () => {
-      cancelled = true
+      controller.abort()
       socket?.off('connect', onConnect)
       socket?.off('nft.updated', onNftUpdated)
       socket?.off('order.updated', onOrderUpdated)

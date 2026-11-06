@@ -1,9 +1,12 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 
+import { waitForMock } from './fixtures.ts'
+
 async function reset(page: Page) {
   await page.goto('/?scenario=fast')
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  await waitForMock(page)
   await page.evaluate(() => {
     window.__kurioMock!.reset()
     localStorage.removeItem('kurio:guest-cart')

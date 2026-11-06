@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { waitForMock } from './fixtures.ts'
+
 const API = 'https://api.mktnft.mock'
 
 type ApiResult = { status: number; body: any; networkError?: string }
@@ -65,6 +67,7 @@ test.describe('camada de mocks (MSW)', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?scenario=fast')
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    await waitForMock(page)
     await page.evaluate(() => window.__kurioMock!.reset())
   })
 

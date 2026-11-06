@@ -13,7 +13,7 @@ export const couponStorage = {
       if (!code) sessionStorage.removeItem(KEY)
       else sessionStorage.setItem(KEY, code)
     } catch {
-      // ignore
+      // Storage bloqueado: o cupom vale só enquanto a página estiver aberta.
     }
   },
 }

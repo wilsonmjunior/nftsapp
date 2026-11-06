@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { waitForMock } from './fixtures.ts'
+
 const API = 'https://api.mktnft.mock'
 
 const grid = (page: Page) => page.getByRole('list', { name: 'NFTs', exact: true })
@@ -41,6 +43,7 @@ async function chooseSort(page: Page, isMobile: boolean, label: string) {
 test.beforeEach(async ({ page }) => {
   await page.goto('/?scenario=fast')
   await expect(cards(page)).toHaveCount(9)
+  await waitForMock(page)
   await page.evaluate(() => window.__kurioMock!.reset())
 })
 

@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { waitForMock } from './fixtures.ts'
+
 async function loginNova(page: Page, redirect = '/pagamento', scenario = 'fast') {
   await page.goto(`/login?redirect=${encodeURIComponent(redirect)}&scenario=${scenario}`)
   await page.getByPlaceholder('contato@email.com').fill('nova@kurio.dev')
@@ -8,6 +10,7 @@ async function loginNova(page: Page, redirect = '/pagamento', scenario = 'fast')
 }
 
 async function clearCheckoutStorage(page: Page) {
+  await waitForMock(page)
   await page.evaluate(() => {
     window.__kurioMock!.reset()
     localStorage.removeItem('kurio:guest-cart')

@@ -43,7 +43,8 @@ async function clearClientStorage(page: Page) {
   )
 }
 
-async function waitForMock(page: Page) {
+/** A UI pinta antes do MSW subir; o controle `__kurioMock` só existe depois. */
+export async function waitForMock(page: Page) {
   await expect.poll(async () => page.evaluate(() => Boolean(window.__kurioMock))).toBe(true)
 }
 

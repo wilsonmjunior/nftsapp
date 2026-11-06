@@ -22,7 +22,7 @@ function normalize(value: string) {
 function parseQuery(url: URL): NftListQuery {
   const params = url.searchParams
   const number = (key: string) => (params.has(key) ? Number(params.get(key)) : undefined)
-  const result = nftListQuery.safeParse({
+  const parsed = nftListQuery.safeParse({
     q: params.get('q') || undefined,
     collections: params.getAll('collections').filter(Boolean),
     networks: params.getAll('networks').filter(Boolean),
@@ -33,12 +33,12 @@ function parseQuery(url: URL): NftListQuery {
     page: number('page'),
     pageSize: number('pageSize'),
   })
-  if (!result.success) {
+  if (!parsed.success) {
     throw fail(422, 'VALIDATION_ERROR', 'Parâmetros de busca inválidos.', {
-      fields: Object.fromEntries(result.error.issues.map((issue) => [issue.path.join('.'), issue.message])),
+      fields: Object.fromEntries(parsed.error.issues.map((issue) => [issue.path.join('.'), issue.message])),
     })
   }
-  return result.data
+  return parsed.data
 }
 
 type Facet = 'collections' | 'networks' | 'price'

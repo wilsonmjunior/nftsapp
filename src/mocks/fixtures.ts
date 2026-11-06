@@ -1,4 +1,4 @@
-import type { EditionKind, Network } from '@/api/contracts'
+import { NETWORKS, type EditionKind } from '@/api/contracts'
 import { eth, toEthString } from '@/lib/eth'
 
 import type { DbState, EditionRecord, NftRecord, UserRecord, WalletRecord } from './db/types'
@@ -20,8 +20,6 @@ export const COLLECTIONS = [
   { id: 'assinaturas', name: 'Assinaturas' },
   { id: 'utilidade', name: 'Utilidade' },
 ] as const
-
-const NETWORKS: Network[] = ['ethereum', 'polygon', 'solana']
 
 const CHARACTERS = {
   emerald: { names: ['Emerald Ape', 'Jade Sentinel', 'Verdant Chief', 'Lucky Clover', 'Varsity King'], attributes: ['Óculos', 'Esmeralda'] },

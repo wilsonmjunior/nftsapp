@@ -6,6 +6,7 @@ export type EthAmount = z.infer<typeof ethAmount>
 
 export const network = z.enum(['ethereum', 'polygon', 'solana'])
 export type Network = z.infer<typeof network>
+export const NETWORKS = network.options
 
 export const NETWORK_LABELS: Record<Network, string> = {
   ethereum: 'Ethereum',

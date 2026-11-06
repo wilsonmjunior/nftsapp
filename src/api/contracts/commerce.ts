@@ -88,6 +88,7 @@ export type OrderStatus = z.infer<typeof orderStatus>
 
 export const walletType = z.enum(['metamask', 'walletconnect', 'coinbase'])
 export type WalletType = z.infer<typeof walletType>
+export const WALLET_TYPES = walletType.options
 
 export const WALLET_TYPE_LABELS: Record<WalletType, string> = {
   metamask: 'MetaMask',

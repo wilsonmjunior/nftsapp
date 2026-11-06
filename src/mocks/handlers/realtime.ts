@@ -9,10 +9,7 @@ import {
 
 startRealtimeHub()
 
-/**
- * `*` cobre a origem da página (mocks) e o host do .env.
- * Matching estrito por host falhava no preview e o interceptor fazia passthrough.
- */
+// `*` porque o socket pode apontar para a origem da página ou para o host do .env; com host fixo o MSW deixa passar.
 export const realtimeHandlers = [
   ws.link('*').addEventListener('connection', (connection) => {
     const io = toSocketIo(connection)

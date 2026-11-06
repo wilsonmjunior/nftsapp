@@ -2,6 +2,7 @@ import { Check, Link2Off, Loader2 } from 'lucide-react'
 
 import {
   NETWORK_LABELS,
+  NETWORKS,
   WALLET_TYPE_LABELS,
   type Network,
   type Wallet,
@@ -9,6 +10,7 @@ import {
 } from '@/api/contracts'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { shortAddress } from '@/lib/eth'
 import { cn } from 'cn'
 
 import { CONNECTABLE_WALLETS, type WalletConnectionStatus } from '../wallet-connection'
@@ -24,13 +26,6 @@ type WalletPanelProps = {
   onConnect: (type: WalletType, outcome?: 'accept' | 'refuse') => void
   onDisconnect: () => void
   compact?: boolean
-}
-
-const NETWORKS: Network[] = ['ethereum', 'polygon', 'solana']
-
-function shortAddress(address: string) {
-  if (address.length < 12) return address
-  return `${address.slice(0, 6)}…${address.slice(-4)}`
 }
 
 export function WalletPanel({
@@ -54,7 +49,7 @@ export function WalletPanel({
           {compact ? 'Pagamento com carteira' : 'Carteira e rede'}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Conexão simulada — sem extensão real de carteira.
+          Conexão simulada, sem extensão de carteira.
         </p>
       </div>
 

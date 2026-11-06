@@ -162,11 +162,12 @@ export const authHandlers = [
     try {
       auth = optionalUser(request)
     } catch {
-      // ignore
+      // Token inválido ou expirado: logout responde 204 do mesmo jeito.
     }
     if (auth) {
+      const { token } = auth.session
       db.mutate((state) => {
-        const session = state.sessions.find((item) => item.token === auth.session.token)
+        const session = state.sessions.find((item) => item.token === token)
         if (session) session.revoked = true
       })
     }

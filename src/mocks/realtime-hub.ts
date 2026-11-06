@@ -90,7 +90,7 @@ export function authenticateToken(token: string | null | undefined) {
   return session.userId
 }
 
-/** Reemite o estado atual (mesmo eventId da versão) — útil para testar dedupe. */
+/** Reemite o estado atual com o mesmo eventId da versão, para testar a deduplicação. */
 export function rebroadcastNft(nftId: string) {
   const event = buildNftEvent(nftId)
   if (event) broadcast(event)

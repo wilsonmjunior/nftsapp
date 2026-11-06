@@ -15,29 +15,38 @@ import {
 } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAddToCart } from '@/features/cart/use-cart'
 import { useFavorite } from '@/features/favorites/use-favorite'
 import { formatEth } from '@/lib/eth'
 import { cn } from 'cn'
 
 import { EditionChips } from './edition-chips'
+import { NftDetailTabs } from './nft-detail-tabs'
 import { NftGallery } from './nft-gallery'
 import { RelatedNfts } from './related-nfts'
 import { ShareNft } from './share-nft'
 
-function pickEdition(editions: Edition[], preferredId: string | undefined, defaultEditionId: string) {
-  const preferred = preferredId ? editions.find((edition) => edition.id === preferredId) : undefined
-  if (preferred && preferred.maxPerOrder > 0) return preferred
-  const fromDefault = editions.find((edition) => edition.id === defaultEditionId)
-  if (fromDefault && fromDefault.maxPerOrder > 0) return fromDefault
-  return editions.find((edition) => edition.maxPerOrder > 0) ?? editions[0]
+const LOW_STOCK_THRESHOLD = 5
+
+function isPurchasable(edition: Edition | undefined): edition is Edition {
+  return Boolean(edition && edition.maxPerOrder > 0)
 }
 
-function shortenAddress(address: string) {
-  if (address.length < 12) return address
-  return `${address.slice(0, 6)}…${address.slice(-4)}`
+function pickEdition(editions: Edition[], preferredId: string | undefined, defaultEditionId: string) {
+  const preferred = editions.find((edition) => edition.id === preferredId)
+  if (isPurchasable(preferred)) return preferred
+  const fromDefault = editions.find((edition) => edition.id === defaultEditionId)
+  if (isPurchasable(fromDefault)) return fromDefault
+  return editions.find(isPurchasable) ?? editions[0]
 }
+
+function buyLabel({ isPending, soldOut, idleLabel }: { isPending: boolean; soldOut: boolean; idleLabel: string }) {
+  if (isPending) return 'Adicionando…'
+  if (soldOut) return 'Esgotado'
+  return idleLabel
+}
+
+type FavoriteState = { isFavorite: boolean; toggle: () => void }
 
 type NftDetailViewProps = {
   nft: NftDetail
@@ -49,15 +58,17 @@ export function NftDetailView({ nft, editionId, onEditionChange }: NftDetailView
   const navigate = useNavigate()
   const quantityId = useId()
   const { add, isPending } = useAddToCart()
-  const { isFavorite, toggle } = useFavorite(nft)
+  const favorite = useFavorite(nft)
   const selected = useMemo(
     () => pickEdition(nft.editions, editionId, nft.defaultEditionId),
     [nft.editions, editionId, nft.defaultEditionId],
   )
   const [quantity, setQuantity] = useState(1)
   const max = selected?.maxPerOrder ?? 0
-  const safeQuantity = Math.min(Math.max(1, quantity), Math.max(1, max || 1))
+  const stepperMax = Math.max(1, max)
+  const safeQuantity = Math.min(Math.max(1, quantity), stepperMax)
   const soldOut = nft.soldOut || max === 0
+  const price = formatEth(selected?.price ?? nft.price)
   const shareUrl = typeof window === 'undefined' ? '' : window.location.href
 
   useEffect(() => {
@@ -76,62 +87,14 @@ export function NftDetailView({ nft, editionId, onEditionChange }: NftDetailView
     if (andGoToCart) void navigate({ to: '/carrinho' })
   }
 
+  const quantityStepperProps = { value: safeQuantity, max: stepperMax, onChange: setQuantity, disabled: soldOut }
+
   return (
     <div className="page-container pb-[calc(var(--bottom-nav-height)+7.5rem)] pt-4 md:pb-16 md:pt-6">
-      <div className="mb-4 flex items-center justify-between md:mb-6">
-        <Breadcrumb className="hidden md:block">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link to="/">Início</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator>/</BreadcrumbSeparator>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link to="/" hash="catalogo">
-                  Mercado
-                </Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator>/</BreadcrumbSeparator>
-            <BreadcrumbItem>
-              <BreadcrumbPage>{nft.name}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
-        <div className="flex w-full items-center justify-between md:hidden">
-          <Link
-            to="/"
-            hash="catalogo"
-            aria-label="Voltar ao mercado"
-            className="grid size-10 place-items-center rounded-full border border-border text-foreground"
-          >
-            <ArrowLeft className="size-5" aria-hidden="true" />
-          </Link>
-          <button
-            type="button"
-            onClick={toggle}
-            aria-pressed={isFavorite}
-            aria-label={isFavorite ? `Remover ${nft.name} dos favoritos` : `Favoritar ${nft.name}`}
-            className={cn(
-              'grid size-10 place-items-center rounded-full border border-border',
-              isFavorite && 'text-brand-strong',
-            )}
-          >
-            <Heart className="size-5" fill={isFavorite ? 'currentColor' : 'none'} aria-hidden="true" />
-          </button>
-        </div>
-      </div>
+      <DetailTopBar nftName={nft.name} favorite={favorite} />
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-12">
-        <NftGallery
-          images={nft.gallery}
-          alt={nft.name}
-          rare={nft.rare}
-          soldOut={nft.soldOut}
-        />
+        <NftGallery images={nft.gallery} alt={nft.name} rare={nft.rare} soldOut={nft.soldOut} />
 
         <div className="min-w-0">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -144,7 +107,7 @@ export function NftDetailView({ nft, editionId, onEditionChange }: NftDetailView
             </p>
           </div>
 
-          <p className="mt-3 hidden text-3xl font-bold text-brand md:block">{formatEth(selected?.price ?? nft.price)}</p>
+          <p className="mt-3 hidden text-3xl font-bold text-brand md:block">{price}</p>
 
           <div className="mt-3 hidden items-center gap-3 md:flex">
             <StarRating value={nft.rating.average} />
@@ -167,16 +130,7 @@ export function NftDetailView({ nft, editionId, onEditionChange }: NftDetailView
                 onEditionChange(id)
               }}
             />
-            {selected && selected.maxPerOrder === 0 && (
-              <p role="status" className="mt-2 text-sm text-required">
-                Esta edição está esgotada. Escolha outra disponível.
-              </p>
-            )}
-            {selected && selected.maxPerOrder > 0 && selected.available <= 5 && selected.kind !== 'open' && (
-              <p role="status" className="mt-2 text-sm text-muted-foreground">
-                Restam {selected.available} {selected.available === 1 ? 'unidade' : 'unidades'}.
-              </p>
-            )}
+            {selected && <EditionStockNotice edition={selected} />}
           </div>
 
           <div className="mt-6 hidden flex-wrap items-center gap-3 md:flex">
@@ -184,49 +138,26 @@ export function NftDetailView({ nft, editionId, onEditionChange }: NftDetailView
               <label htmlFor={quantityId} className="sr-only">
                 Quantidade
               </label>
-              <QuantityStepper
-                id={quantityId}
-                value={safeQuantity}
-                max={Math.max(1, max)}
-                onChange={setQuantity}
-                disabled={soldOut}
-              />
+              <QuantityStepper id={quantityId} {...quantityStepperProps} />
             </div>
             <Button
               className="h-11 min-w-36 px-8 uppercase"
               disabled={soldOut || isPending}
               onClick={() => void buy(true)}
             >
-              {isPending ? 'Adicionando…' : soldOut ? 'Esgotado' : 'Comprar'}
+              {buyLabel({ isPending, soldOut, idleLabel: 'Comprar' })}
             </Button>
-            <Button
-              variant="outline"
-              className="h-11 gap-2"
-              onClick={toggle}
-              aria-pressed={isFavorite}
-            >
-              <Heart fill={isFavorite ? 'currentColor' : 'none'} aria-hidden="true" />
+            <Button variant="outline" className="h-11 gap-2" onClick={favorite.toggle} aria-pressed={favorite.isFavorite}>
+              <Heart fill={favorite.isFavorite ? 'currentColor' : 'none'} aria-hidden="true" />
               Favoritar
             </Button>
           </div>
 
           <dl className="mt-6 grid gap-1.5 text-sm text-muted-foreground">
-            <div>
-              <dt className="inline">ID do token: </dt>
-              <dd className="inline text-foreground">{nft.tokenId}</dd>
-            </div>
-            <div>
-              <dt className="inline">Coleção: </dt>
-              <dd className="inline text-foreground">{nft.collection.name}</dd>
-            </div>
-            <div>
-              <dt className="inline">Atributos: </dt>
-              <dd className="inline text-foreground">{nft.attributes.join(', ')}</dd>
-            </div>
-            <div>
-              <dt className="inline">Rede: </dt>
-              <dd className="inline text-foreground">{NETWORK_LABELS[nft.network]}</dd>
-            </div>
+            <DetailRow label="ID do token" value={nft.tokenId} />
+            <DetailRow label="Coleção" value={nft.collection.name} />
+            <DetailRow label="Atributos" value={nft.attributes.join(', ')} />
+            <DetailRow label="Rede" value={NETWORK_LABELS[nft.network]} />
           </dl>
 
           <div className="mt-6 hidden md:block">
@@ -235,74 +166,7 @@ export function NftDetailView({ nft, editionId, onEditionChange }: NftDetailView
         </div>
       </div>
 
-      <Tabs defaultValue="detalhes" className="mt-12 md:mt-16">
-        <TabsList variant="line" className="h-auto w-full justify-start gap-6 rounded-none bg-transparent p-0">
-          <TabsTrigger
-            value="detalhes"
-            className="rounded-none border-0 px-0 pb-3 text-sm data-[state=active]:text-brand-strong"
-          >
-            Detalhes do NFT
-          </TabsTrigger>
-          <TabsTrigger
-            value="avaliacoes"
-            id="avaliacoes"
-            className="rounded-none border-0 px-0 pb-3 text-sm data-[state=active]:text-brand-strong"
-          >
-            Avaliações de colecionadores ({nft.rating.count})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="detalhes" className="mt-6 max-w-3xl space-y-4 text-sm leading-relaxed text-muted-foreground">
-          {nft.details.map((paragraph) => (
-            <p key={paragraph.slice(0, 24)}>{paragraph}</p>
-          ))}
-          <p>
-            <span className="font-bold text-foreground">Rede: </span>
-            Cunhado na {NETWORK_LABELS[nft.network]} com procedência imutável e metadados armazenados no IPFS.
-          </p>
-          <p>
-            <span className="font-bold text-foreground">Contrato: </span>
-            Direitos autorais do criador: {nft.royaltiesPercent}% nas vendas secundárias, pagos automaticamente pelos
-            mercados compatíveis.
-          </p>
-          <p>
-            <span className="font-bold text-foreground">Endereço: </span>
-            <a
-              href={`https://etherscan.io/address/${nft.contractAddress}`}
-              target="_blank"
-              rel="noreferrer"
-              className="text-brand-strong underline underline-offset-4"
-            >
-              {shortenAddress(nft.contractAddress)}
-            </a>
-            {' · '}
-            Contrato inteligente ERC-721 verificado (link simulado).
-          </p>
-        </TabsContent>
-
-        <TabsContent value="avaliacoes" className="mt-6">
-          {nft.reviews.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Ainda não há avaliações para este NFT.</p>
-          ) : (
-            <ul className="grid max-w-3xl gap-4">
-              {nft.reviews.map((review) => (
-                <li key={review.id} className="rounded-md bg-surface px-4 py-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-bold">{review.author}</p>
-                    <StarRating value={review.rating} size="sm" />
-                  </div>
-                  <p className="mt-2 text-sm text-muted-foreground">{review.comment}</p>
-                  <p className="mt-2 text-xs text-subtle">
-                    <time dateTime={review.createdAt}>
-                      {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(new Date(review.createdAt))}
-                    </time>
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </TabsContent>
-      </Tabs>
+      <NftDetailTabs nft={nft} />
 
       <RelatedNfts nftId={nft.id} collectionId={nft.collection.id} collectionName={nft.collection.name} />
 
@@ -313,15 +177,9 @@ export function NftDetailView({ nft, editionId, onEditionChange }: NftDetailView
         <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Qtd.</span>
-            <QuantityStepper
-              value={safeQuantity}
-              max={Math.max(1, max)}
-              onChange={setQuantity}
-              disabled={soldOut}
-              size="compact"
-            />
+            <QuantityStepper {...quantityStepperProps} size="compact" />
           </div>
-          <p className="text-lg font-bold text-brand">{formatEth(selected?.price ?? nft.price)}</p>
+          <p className="text-lg font-bold text-brand">{price}</p>
         </div>
         <div className="mx-auto mt-3 flex max-w-lg gap-2">
           <Button
@@ -329,7 +187,7 @@ export function NftDetailView({ nft, editionId, onEditionChange }: NftDetailView
             disabled={soldOut || isPending}
             onClick={() => void buy(true)}
           >
-            {isPending ? 'Adicionando…' : soldOut ? 'Esgotado' : 'Comprar NFT'}
+            {buyLabel({ isPending, soldOut, idleLabel: 'Comprar NFT' })}
           </Button>
           <Button
             variant="outline"
@@ -343,6 +201,85 @@ export function NftDetailView({ nft, editionId, onEditionChange }: NftDetailView
           </Button>
         </div>
       </aside>
+    </div>
+  )
+}
+
+function DetailTopBar({ nftName, favorite }: { nftName: string; favorite: FavoriteState }) {
+  return (
+    <div className="mb-4 flex items-center justify-between md:mb-6">
+      <Breadcrumb className="hidden md:block">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/">Início</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator>/</BreadcrumbSeparator>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/" hash="catalogo">
+                Mercado
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator>/</BreadcrumbSeparator>
+          <BreadcrumbItem>
+            <BreadcrumbPage>{nftName}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <div className="flex w-full items-center justify-between md:hidden">
+        <Link
+          to="/"
+          hash="catalogo"
+          aria-label="Voltar ao mercado"
+          className="grid size-10 place-items-center rounded-full border border-border text-foreground"
+        >
+          <ArrowLeft className="size-5" aria-hidden="true" />
+        </Link>
+        <button
+          type="button"
+          onClick={favorite.toggle}
+          aria-pressed={favorite.isFavorite}
+          aria-label={favorite.isFavorite ? `Remover ${nftName} dos favoritos` : `Favoritar ${nftName}`}
+          className={cn(
+            'grid size-10 place-items-center rounded-full border border-border',
+            favorite.isFavorite && 'text-brand-strong',
+          )}
+        >
+          <Heart className="size-5" fill={favorite.isFavorite ? 'currentColor' : 'none'} aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function EditionStockNotice({ edition }: { edition: Edition }) {
+  if (edition.maxPerOrder === 0) {
+    return (
+      <p role="status" className="mt-2 text-sm text-required">
+        Esta edição está esgotada. Escolha outra disponível.
+      </p>
+    )
+  }
+
+  const lowStock = edition.kind !== 'open' && edition.available <= LOW_STOCK_THRESHOLD
+  if (!lowStock) return null
+
+  return (
+    <p role="status" className="mt-2 text-sm text-muted-foreground">
+      Restam {edition.available} {edition.available === 1 ? 'unidade' : 'unidades'}.
+    </p>
+  )
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="inline">{label}: </dt>
+      <dd className="inline text-foreground">{value}</dd>
     </div>
   )
 }

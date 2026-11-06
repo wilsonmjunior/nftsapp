@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { waitForMock } from './fixtures.ts'
+
 const API = 'https://api.mktnft.mock'
 
 async function loginNova(page: Page, redirect = '/carrinho') {
@@ -12,6 +14,7 @@ async function loginNova(page: Page, redirect = '/carrinho') {
 async function seedGuestCart(page: Page) {
   await page.goto('/?scenario=fast')
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  await waitForMock(page)
   await page.evaluate(() => {
     window.__kurioMock!.reset()
     localStorage.removeItem('kurio:session-token')
@@ -29,6 +32,7 @@ async function seedGuestCart(page: Page) {
 test.beforeEach(async ({ page }) => {
   await page.goto('/?scenario=fast')
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  await waitForMock(page)
   await page.evaluate(() => {
     window.__kurioMock!.reset()
     localStorage.removeItem('kurio:guest-cart')

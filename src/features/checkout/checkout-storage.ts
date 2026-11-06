@@ -14,7 +14,7 @@ function write(key: string, value: string | null) {
     if (value === null) sessionStorage.removeItem(key)
     else sessionStorage.setItem(key, value)
   } catch {
-    // ignore
+    // Storage bloqueado: o checkout segue sem persistir entre recargas.
   }
 }
 
@@ -30,7 +30,7 @@ export const checkoutIdempotency = {
     return key
   },
   clear: () => write(IDEMPOTENCY_KEY, null),
-  /** Após PRICE_CHANGED o payload mudou — precisa de chave nova. */
+  /** Após PRICE_CHANGED o payload mudou, então precisa de chave nova. */
   rotate() {
     const key = crypto.randomUUID()
     write(IDEMPOTENCY_KEY, key)

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -9,17 +9,21 @@ import { cartApi, ordersApi, quoteApi } from '@/api/commerce'
 import {
   collectorInfo,
   quote as quoteSchema,
+  type ApiErrorCode,
   type CollectorInfo,
+  type CreateOrderInput,
   type Network,
   type Order,
   type Quote,
   type Wallet,
   type WalletType,
 } from '@/api/contracts'
-import { toApiError } from '@/api/errors'
+import { toApiError, type ApiError } from '@/api/errors'
 import { useAnnounce } from '@/components/a11y/use-announce'
+import { toCartLines } from '@/features/cart/guest-cart'
 import { cartQueryOptions } from '@/features/cart/queries'
-import { couponStorage } from '@/features/cart/coupon-storage'
+import { QUOTE_SCOPE, quoteKey } from '@/features/cart/quote-query'
+import { useCoupon } from '@/features/cart/use-coupon'
 import { useSession } from '@/features/session/use-session'
 import { applyApiErrors } from '@/lib/form-errors'
 
@@ -27,18 +31,52 @@ import { checkoutIdempotency, pendingOrderStorage } from './checkout-storage'
 import { walletsQueryOptions } from './queries'
 import { simulateWalletConnect, type WalletConnectionStatus } from './wallet-connection'
 
-function toLines(items: Array<{ nftId: string; editionId: string; quantity: number }>) {
-  return items.map(({ nftId, editionId, quantity }) => ({ nftId, editionId, quantity }))
+const COLLECTOR_FIELDS = collectorInfo.keyof().options
+
+const EMPTY_COLLECTOR: CollectorInfo = {
+  displayName: '',
+  username: '',
+  profileName: '',
+  email: '',
+  referralCode: '',
+  ensName: '',
+  note: '',
 }
 
-function listWallets(primary: Wallet | null, secondary: Wallet | null): Wallet[] {
-  return [primary, secondary].filter((item): item is Wallet => Boolean(item))
+const QUOTE_CONFLICT_CODES = ['PRICE_CHANGED', 'AVAILABILITY_CONFLICT', 'QUOTE_EXPIRED'] as const
+type QuoteConflictCode = (typeof QUOTE_CONFLICT_CODES)[number]
+
+function isQuoteConflict(code: ApiErrorCode | undefined): code is QuoteConflictCode {
+  return QUOTE_CONFLICT_CODES.includes(code as QuoteConflictCode)
 }
 
 export type ReviewState = {
-  reason: 'PRICE_CHANGED' | 'AVAILABILITY_CONFLICT' | 'QUOTE_EXPIRED' | 'review'
+  reason: QuoteConflictCode | 'review'
   message: string
   quote: Quote
+}
+
+function listWallets(primary: Wallet | null, secondary: Wallet | null): Wallet[] {
+  return [primary, secondary].filter((wallet): wallet is Wallet => wallet !== null)
+}
+
+function defaultWallet(wallets: Wallet[]): Wallet | null {
+  return wallets.find((wallet) => wallet.slot === 'primary') ?? wallets[0] ?? null
+}
+
+function parseQuoteDetails(details: unknown): Quote | undefined {
+  if (!details || typeof details !== 'object') return undefined
+  const parsed = quoteSchema.safeParse((details as { quote?: unknown }).quote)
+  return parsed.success ? parsed.data : undefined
+}
+
+async function findPendingOrder(): Promise<Order | null> {
+  try {
+    const pending = await ordersApi.list('pending')
+    return pending[0] ?? null
+  } catch {
+    return null
+  }
 }
 
 export function useCheckoutPage() {
@@ -63,39 +101,37 @@ export function useCheckoutPage() {
     [walletsQuery.data],
   )
 
-  const [walletId, setWalletId] = useState<string | null>(null)
-  const [network, setNetwork] = useState<Network>('ethereum')
+  const [chosenWalletId, setChosenWalletId] = useState<string | null>(null)
+  const [chosenNetwork, setChosenNetwork] = useState<Network | null>(null)
   const [connection, setConnection] = useState<WalletConnectionStatus>('disconnected')
   const [connectingType, setConnectingType] = useState<WalletType | null>(null)
-  const [draftCoupon, setDraftCoupon] = useState(() => couponStorage.get() ?? '')
-  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(() => couponStorage.get())
-  const [couponError, setCouponError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [review, setReview] = useState<ReviewState | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const selectedWallet = wallets.find((item) => item.id === walletId) ?? null
+  const selectedWallet = wallets.find((wallet) => wallet.id === chosenWalletId) ?? defaultWallet(wallets)
+  const network = chosenNetwork ?? selectedWallet?.network ?? 'ethereum'
 
-  useEffect(() => {
-    if (walletId || wallets.length === 0) return
-    const primary = wallets.find((item) => item.slot === 'primary') ?? wallets[0]!
-    setWalletId(primary.id)
-    setNetwork(primary.network)
-  }, [wallets, walletId])
+  const lines = useMemo(() => toCartLines(cartQuery.data?.items ?? []), [cartQuery.data?.items])
 
-  const lines = useMemo(() => toLines(cartQuery.data?.items ?? []), [cartQuery.data?.items])
+  const { dropIfRejected, ...coupon } = useCoupon({ owner: userId, lines, network })
+  const { appliedCoupon } = coupon
+  const currentQuoteKey = quoteKey({ owner: userId, lines, couponCode: appliedCoupon, network })
+
+  function quoteRequest() {
+    return { items: lines, couponCode: appliedCoupon ?? undefined, network }
+  }
 
   const quoteQuery = useQuery({
-    queryKey: ['quote', userId, lines, appliedCoupon, network],
-    queryFn: ({ signal }) =>
-      quoteApi.create(
-        {
-          items: lines,
-          couponCode: appliedCoupon ?? undefined,
-          network,
-        },
-        signal,
-      ),
+    queryKey: currentQuoteKey,
+    queryFn: async ({ signal }) => {
+      try {
+        return await quoteApi.create(quoteRequest(), signal)
+      } catch (error) {
+        if (appliedCoupon) dropIfRejected(error)
+        throw error
+      }
+    },
     enabled: Boolean(user) && lines.length > 0,
     staleTime: 8_000,
     retry: false,
@@ -106,39 +142,35 @@ export function useCheckoutPage() {
   const form = useForm<CollectorInfo>({
     resolver: zodResolver(collectorInfo),
     mode: 'onTouched',
-    defaultValues: {
-      displayName: '',
-      username: '',
-      profileName: '',
-      email: '',
-      referralCode: '',
-      ensName: '',
-      note: '',
-    },
+    defaultValues: EMPTY_COLLECTOR,
   })
 
   useEffect(() => {
     if (!user) return
-    const wallet = selectedWallet
     form.reset({
-      displayName: wallet?.displayName || user.displayName,
+      displayName: selectedWallet?.displayName || user.displayName,
       username: user.username,
-      profileName: wallet?.profileName || user.username,
-      email: wallet?.email || user.email,
-      referralCode: wallet?.referralCode || '',
-      ensName: wallet?.ensName || user.ensName || '',
+      profileName: selectedWallet?.profileName || user.username,
+      email: selectedWallet?.email || user.email,
+      referralCode: selectedWallet?.referralCode || '',
+      ensName: selectedWallet?.ensName || user.ensName || '',
       note: form.getValues('note') || '',
     })
   }, [user, selectedWallet, form])
 
+  function goToOrder(orderId: string) {
+    pendingOrderStorage.set(orderId)
+    void navigate({ to: '/pedidos/$orderId', params: { orderId } })
+  }
+
   useEffect(() => {
     const pendingId = pendingOrderStorage.get()
     if (!pendingId || !user) return
-    let cancelled = false
+    const controller = new AbortController()
     void ordersApi
       .get(pendingId)
       .then((order) => {
-        if (cancelled) return
+        if (controller.signal.aborted) return
         if (order.status === 'pending') {
           void navigate({ to: '/pedidos/$orderId', params: { orderId: order.id } })
           return
@@ -147,61 +179,16 @@ export function useCheckoutPage() {
         checkoutIdempotency.clear()
       })
       .catch(() => {
-        if (!cancelled) pendingOrderStorage.clear()
+        if (!controller.signal.aborted) pendingOrderStorage.clear()
       })
-    return () => {
-      cancelled = true
-    }
+    return () => controller.abort()
   }, [user, navigate])
 
-  const applyCouponMutation = useMutation({
-    mutationFn: async (code: string) => {
-      const quote = await quoteApi.create({ items: lines, couponCode: code, network })
-      return { quote, code }
-    },
-    onSuccess: ({ quote, code }) => {
-      setAppliedCoupon(code)
-      setDraftCoupon(code)
-      setCouponError(null)
-      couponStorage.set(code)
-      queryClient.setQueryData(['quote', userId, lines, code, network], quote)
-      announce(`Cupom ${code} aplicado.`)
-      toast.success(`Cupom ${code} aplicado.`)
-    },
-    onError: (error) => {
-      const apiError = toApiError(error)
-      setCouponError(apiError.fields.couponCode ?? apiError.message)
-    },
-  })
-
-  function applyCoupon() {
-    const code = draftCoupon.trim().toUpperCase()
-    if (!code) {
-      setCouponError('Informe um código promocional.')
-      return
-    }
-    setCouponError(null)
-    applyCouponMutation.mutate(code)
-  }
-
-  function removeCoupon() {
-    setAppliedCoupon(null)
-    setDraftCoupon('')
-    setCouponError(null)
-    couponStorage.set(null)
-    announce('Cupom removido.')
-  }
-
   function selectWallet(id: string) {
-    const wallet = wallets.find((item) => item.id === id)
-    if (!wallet) return
-    setWalletId(id)
-    setNetwork(wallet.network)
+    if (!wallets.some((wallet) => wallet.id === id)) return
+    setChosenWalletId(id)
+    setChosenNetwork(null)
     if (connection === 'connected') setConnection('disconnected')
-  }
-
-  function selectNetwork(next: Network) {
-    setNetwork(next)
   }
 
   async function connectWallet(type: WalletType, outcome: 'accept' | 'refuse' = 'accept') {
@@ -211,10 +198,10 @@ export function useCheckoutPage() {
     }
     setConnectingType(type)
     setConnection('connecting')
-    const result = await simulateWalletConnect(outcome)
-    setConnection(result)
+    const status = await simulateWalletConnect(outcome)
+    setConnection(status)
     setConnectingType(null)
-    if (result === 'connected') {
+    if (status === 'connected') {
       announce(`Carteira ${type} conectada.`)
       toast.success('Carteira conectada.')
     } else {
@@ -228,27 +215,79 @@ export function useCheckoutPage() {
     announce('Carteira desconectada.')
   }
 
+  function orderBlocker(quote: Quote): string | null {
+    if (connection !== 'connected') return 'Conecte a carteira antes de pagar.'
+    if (!quote.purchasable) return 'Resolva os itens com problema antes de finalizar.'
+    return null
+  }
+
+  async function refreshCartAfterOrder() {
+    const cartKey = cartQueryOptions(userId).queryKey
+    queryClient.setQueryData(cartKey, await cartApi.get().catch(() => undefined))
+    void queryClient.invalidateQueries({ queryKey: cartKey })
+    void queryClient.invalidateQueries({ queryKey: [QUOTE_SCOPE] })
+  }
+
+  /** Após timeout o pedido pode ter sido criado: a mesma chave de idempotência o recupera. */
+  async function recoverAfterTimeout(input: CreateOrderInput, idempotencyKey: string) {
+    try {
+      const recovered = await ordersApi.create(input, idempotencyKey)
+      announce('Pedido recuperado após timeout.')
+      goToOrder(recovered.id)
+    } catch (retryError) {
+      const pending = await findPendingOrder()
+      if (pending) goToOrder(pending.id)
+      else setFormError(toApiError(retryError).message)
+    }
+  }
+
+  async function fetchFreshQuote() {
+    try {
+      return await quoteApi.create(quoteRequest())
+    } catch {
+      return undefined
+    }
+  }
+
+  /** Abre a revisão com a nova cotação; devolve `false` se não houver cotação para revisar. */
+  async function reviewQuoteConflict(apiError: ApiError, reason: QuoteConflictCode) {
+    const nextQuote = parseQuoteDetails(apiError.details) ?? (await fetchFreshQuote())
+    if (!nextQuote) return false
+    queryClient.setQueryData(currentQuoteKey, nextQuote)
+    checkoutIdempotency.rotate()
+    setReview({ reason, message: apiError.message, quote: nextQuote })
+    announce(apiError.message)
+    return true
+  }
+
+  async function handleOrderError(error: unknown, input: CreateOrderInput, idempotencyKey: string) {
+    const apiError = toApiError(error)
+    if (apiError.kind === 'timeout') {
+      await recoverAfterTimeout(input, idempotencyKey)
+      return
+    }
+    if (isQuoteConflict(apiError.code) && (await reviewQuoteConflict(apiError, apiError.code))) return
+    // O carrinho fica intacto: cupom e itens continuam para nova tentativa.
+    setFormError(applyApiErrors(apiError, form.setError, COLLECTOR_FIELDS) ?? apiError.message)
+  }
+
   async function placeOrder(collector: CollectorInfo, quote: Quote) {
     if (!selectedWallet) {
       setFormError('Selecione uma carteira cadastrada.')
       return
     }
-    if (connection !== 'connected') {
-      setFormError('Conecte a carteira antes de pagar.')
-      return
-    }
-    if (!quote.purchasable) {
-      setFormError('Resolva os itens com problema antes de finalizar.')
+    const blocker = orderBlocker(quote)
+    if (blocker) {
+      setFormError(blocker)
       return
     }
 
     setSubmitting(true)
     setFormError(null)
-    const key = checkoutIdempotency.ensure(true)
-
-    const input = {
+    const idempotencyKey = checkoutIdempotency.ensure(true)
+    const input: CreateOrderInput = {
       quoteId: quote.id,
-      items: toLines(quote.items),
+      items: toCartLines(quote.items),
       couponCode: appliedCoupon ?? undefined,
       network,
       walletId: selectedWallet.id,
@@ -256,100 +295,15 @@ export function useCheckoutPage() {
     }
 
     try {
-      const order = await ordersApi.create(input, key)
-      pendingOrderStorage.set(order.id)
-      queryClient.setQueryData(cartQueryOptions(userId).queryKey, await cartApi.get().catch(() => undefined))
-      void queryClient.invalidateQueries({ queryKey: cartQueryOptions(userId).queryKey })
-      void queryClient.invalidateQueries({ queryKey: ['quote'] })
+      const order = await ordersApi.create(input, idempotencyKey)
+      await refreshCartAfterOrder()
       announce('Pedido enviado. Aguardando confirmação.')
-      void navigate({ to: '/pedidos/$orderId', params: { orderId: order.id } })
+      goToOrder(order.id)
     } catch (error) {
-      const apiError = toApiError(error)
-
-      if (apiError.kind === 'timeout') {
-        // Timeout após criar: mesma chave recupera o pedido.
-        try {
-          const recovered = await ordersApi.create(input, key)
-          pendingOrderStorage.set(recovered.id)
-          announce('Pedido recuperado após timeout.')
-          void navigate({ to: '/pedidos/$orderId', params: { orderId: recovered.id } })
-          return
-        } catch (retryError) {
-          const pending = await recoverPendingOrder()
-          if (pending) {
-            pendingOrderStorage.set(pending.id)
-            void navigate({ to: '/pedidos/$orderId', params: { orderId: pending.id } })
-            return
-          }
-          setFormError(toApiError(retryError).message)
-          return
-        }
-      }
-
-      if (
-        apiError.code === 'PRICE_CHANGED' ||
-        apiError.code === 'AVAILABILITY_CONFLICT' ||
-        apiError.code === 'QUOTE_EXPIRED'
-      ) {
-        const nextQuote = parseQuoteDetails(apiError.details) ?? (await refreshQuote())
-        if (nextQuote) {
-          queryClient.setQueryData(['quote', userId, lines, appliedCoupon, network], nextQuote)
-          checkoutIdempotency.rotate()
-          setReview({
-            reason: apiError.code,
-            message: apiError.message,
-            quote: nextQuote,
-          })
-          announce(apiError.message)
-          return
-        }
-      }
-
-      const fieldMessage = applyApiErrors(apiError, form.setError, [
-        'displayName',
-        'username',
-        'profileName',
-        'email',
-        'referralCode',
-        'ensName',
-        'note',
-      ])
-      setFormError(fieldMessage || apiError.message)
-      // Falha: carrinho permanece intacto (não limpamos cupom nem itens).
+      await handleOrderError(error, input, idempotencyKey)
     } finally {
       setSubmitting(false)
     }
-  }
-
-  async function recoverPendingOrder(): Promise<Order | null> {
-    try {
-      const pending = await ordersApi.list('pending')
-      return pending[0] ?? null
-    } catch {
-      return null
-    }
-  }
-
-  async function refreshQuote() {
-    try {
-      return await quoteApi.create({
-        items: lines,
-        couponCode: appliedCoupon ?? undefined,
-        network,
-      })
-    } catch {
-      return undefined
-    }
-  }
-
-  function openReview() {
-    const quote = activeQuote
-    if (!quote) return
-    setReview({ reason: 'review', message: 'Confirme os totais antes de enviar o pagamento.', quote })
-  }
-
-  function dismissReview() {
-    setReview(null)
   }
 
   function confirmReview() {
@@ -370,45 +324,32 @@ export function useCheckoutPage() {
       setFormError('Conecte a carteira antes de pagar.')
       return
     }
-    openReview()
+    setReview({ reason: 'review', message: 'Confirme os totais antes de enviar o pagamento.', quote: activeQuote })
   })
 
   const isLoading = cartQuery.isPending || walletsQuery.isPending
-  const isEmpty = !isLoading && lines.length === 0
   const quotePending = lines.length > 0 && (quoteQuery.isPending || quoteQuery.isFetching) && !review
 
   return {
-    user,
     form,
     formError,
-    items: activeQuote?.items ?? [],
-    lines,
     isLoading,
-    isEmpty,
+    isEmpty: !isLoading && lines.length === 0,
     quote: activeQuote,
     quotePending,
-    quoteError: quoteQuery.error ? toApiError(quoteQuery.error) : null,
-    draftCoupon,
-    setDraftCoupon,
-    appliedCoupon,
-    couponError,
-    applyCoupon,
-    removeCoupon,
-    applyingCoupon: applyCouponMutation.isPending,
+    ...coupon,
     wallets,
-    walletId,
-    selectedWallet,
+    walletId: selectedWallet?.id ?? null,
     selectWallet,
     network,
-    selectNetwork,
+    selectNetwork: setChosenNetwork,
     connection,
     connectingType,
     connectWallet,
     disconnectWallet,
     review,
-    dismissReview,
+    dismissReview: () => setReview(null),
     confirmReview,
-    openReview,
     submit,
     submitting,
     canPay:
@@ -418,11 +359,4 @@ export function useCheckoutPage() {
       !submitting &&
       !quotePending,
   }
-}
-
-function parseQuoteDetails(details: unknown): Quote | undefined {
-  if (!details || typeof details !== 'object') return undefined
-  const raw = (details as { quote?: unknown }).quote
-  const parsed = quoteSchema.safeParse(raw)
-  return parsed.success ? parsed.data : undefined
 }
